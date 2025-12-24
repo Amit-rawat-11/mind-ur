@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "706042149840",
+    "project_id": "mind-ur",
+    "storage_bucket": "mind-ur.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:706042149840:android:f247d1f596ffce37fa57d5",
+        "android_client_info": {
+          "package_name": "com.amit.mindur"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8gowSCG6FpXT3u3hfZHEp0k45q3Dx7sE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
