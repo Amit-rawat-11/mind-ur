@@ -3,12 +3,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
+import 'api_config_service.dart';
+
 class MindurAiService {
   static const String _endpoint =
       'https://openrouter.ai/api/v1/chat/completions';
 
-  static final String _apiKey = dotenv.env['OPENROUTER_API_KEY'] ?? '';
-
+  static final _apiKey = ApiConfigService.openRouterKey!;
   static const String _primaryModel ='google/gemini-2.0-flash-exp:free';
 
   static const String _fallbackModel = 'mistralai/mistral-7b-instruct';  

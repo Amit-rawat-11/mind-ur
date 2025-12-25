@@ -3,31 +3,26 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+
+import 'services/api_config_service.dart';
+import 'services/notification_service.dart';
+
 import 'theme/theme.dart';
 import 'theme/theme_controller.dart';
-import 'services/notification_service.dart'; // ← ADD THIS
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Local storage
+  // 📦 Local storage
   await Hive.initFlutter();
 
-  // Load env for all platforms
-  await dotenv.load(fileName: ".env");
-
-  // Load saved theme
+  // 🎨 Load saved theme
   await AppThemeController.loadTheme();
-
-  // ✅ Initialize notifications
-  await NotificationService().initialize();
 
   runApp(const MyApp());
 }
@@ -46,71 +41,87 @@ class MyApp extends StatelessWidget {
           theme: MindurTheme.lightTheme(),
           darkTheme: MindurTheme.darkTheme(),
           themeMode: mode,
-          home: const FirebaseInitWrapper(),
+          home: const AppInitGate(),
         );
       },
     );
   }
 }
 
-class FirebaseInitWrapper extends StatefulWidget {
-  const FirebaseInitWrapper({super.key});
+class AppInitGate extends StatefulWidget {
+  const AppInitGate({super.key});
 
   @override
-  State<FirebaseInitWrapper> createState() => _FirebaseInitWrapperState();
+  State<AppInitGate> createState() => _AppInitGateState();
 }
 
-class _FirebaseInitWrapperState extends State<FirebaseInitWrapper> {
-  bool _isLoading = true;
-
+class _AppInitGateState extends State<AppInitGate> {
   @override
   void initState() {
     super.initState();
-    _initFirebase();
+    _initApp();
   }
 
-  Future<void> _initFirebase() async {
+  Future<void> _initApp() async {
+    // 🔥 Firebase
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
+    // 🌐 Web auth persistence
     if (kIsWeb) {
       try {
         await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
-      } catch (e) {
-        debugPrint('Auth persistence error: $e');
-      }
+      } catch (_) {}
     }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
+    // 🔑 Load API keys
+    await ApiConfigService.load();
+
+    // 🔔 Notifications
+    await NotificationService().initialize();
+
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
+      _fadeScaleRoute(
+        user != null ? const MainScreen() : const LoginScreen(),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return const AuthWrapper();
+    // Native splash stays visible here
+    return const SizedBox.shrink();
   }
 }
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
+/// 🎬 Fade + subtle scale transition
+PageRouteBuilder _fadeScaleRoute(Widget page) {
+  return PageRouteBuilder(
+    transitionDuration: const Duration(milliseconds: 350),
+    pageBuilder: (_, __, ___) => page,
+    transitionsBuilder: (_, animation, __, child) {
+      final fade = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOut,
+      );
 
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active) {
-          final user = snapshot.data;
-          return user != null ? const MainScreen() : const LoginScreen();
-        }
+      final scale = Tween<double>(
+        begin: 0.98,
+        end: 1.0,
+      ).animate(fade);
 
-        return const Scaffold(body: Center(child: CircularProgressIndicator()));
-      },
-    );
-  }
+      return FadeTransition(
+        opacity: fade,
+        child: ScaleTransition(
+          scale: scale,
+          child: child,
+        ),
+      );
+    },
+  );
 }
