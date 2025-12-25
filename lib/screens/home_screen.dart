@@ -17,8 +17,8 @@ import 'package:intl/intl.dart';
 import '../components/homescreen_cards.dart';
 import '../constant/datetime.dart';
 import '../services/firebase_service.dart';
+import '../services/notification_helper.dart';
 import '../services/notification_service.dart';
-import '../utils/chat_controller.dart';
 import 'account_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -29,10 +29,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ChatController _controller = ChatController();
-
   int journalCurrentStreak = 0;
-  int journalLongestStreak = 0;
+  int longestStreak = 0;
 
   final User? user = FirebaseAuth.instance.currentUser;
   double habitProgress = 0.0;
@@ -47,6 +45,12 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     fetchUserData();
+    _checkAchievements(); // 🆕 Check achievements on app open
+  }
+
+  /// 🆕 Check and send achievement notifications
+  Future<void> _checkAchievements() async {
+    await NotificationHelper.checkAchievements();
   }
 
   bool _isToday(dynamic timestamp) {
@@ -114,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final currentStreak = streakData['currentStreak'] ?? 0;
 
-      // ✅ TRIGGER STREAK MILESTONE NOTIFICATION
+      // ✅ Trigger streak milestone notification
       await NotificationService().scheduleStreakMilestone(currentStreak);
 
       setState(() {
@@ -123,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
         habits = fetchedHabits;
         habitProgress = calculatedProgress;
         journalCurrentStreak = currentStreak;
-        journalLongestStreak = streakData['longestStreak'] ?? 0;
+        longestStreak = streakData['longestStreak'] ?? 0;
         isLoading = false;
       });
     } catch (e) {
@@ -306,7 +310,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: colors.onSurface,
                               ),
                             ),
+
                             const SizedBox(height: 20),
+
                             CircularPercentIndicator(
                               radius: 78,
                               lineWidth: 22,
@@ -329,7 +335,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    "${habits.where((h) => h['isCompleted'] == true).length} of ${habits.length} Habits",
+                                    "${habits.where((h) => h['isCompleted'] == true).length}"
+                                    " of ${habits.length} Habits",
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
                                           color: colors.onSurface.withOpacity(
@@ -340,13 +347,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
+
                             const SizedBox(height: 20),
+
                             ListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: limitedHabits.length,
                               itemBuilder: (context, index) {
                                 final habit = limitedHabits[index];
+
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Container(
@@ -401,12 +411,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                               },
                             ),
-                            ElevatedButton(
-                              onPressed: () {
-                                _controller.resetAllChatsLocally();
-                              },
-                              child: const Text("Reset"),
-                            ),
                           ],
                         ),
                       ),
@@ -416,16 +420,5 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  // 🔔 ADDED helpers
-  int _parseJournalHour(String? time) {
-    if (time == null || !time.contains(':')) return 21;
-    return int.tryParse(time.split(':')[0]) ?? 21;
-  }
-
-  int _parseJournalMinute(String? time) {
-    if (time == null || !time.contains(':')) return 0;
-    return int.tryParse(time.split(':')[1]) ?? 0;
   }
 }

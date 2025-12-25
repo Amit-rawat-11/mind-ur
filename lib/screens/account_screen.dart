@@ -314,18 +314,19 @@ class _AccountScreenState extends State<AccountScreen>
                                       userDoc.data()?['journalReminder'] ??
                                       'Evening';
 
-                                  // Reschedule reminders
+                                  // ✅ SCHEDULE ALL NOTIFICATIONS (with smart features)
                                   await notificationService
-                                      .scheduleJournalReminder(journalReminder);
-                                  await notificationService
-                                      .scheduleHabitReminder();
+                                      .scheduleAllNotifications(
+                                        journalReminder,
+                                      );
 
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text(
-                                          '✅ Notifications enabled',
+                                          '✅ All notifications enabled with smart features',
                                         ),
+                                        duration: Duration(seconds: 2),
                                       ),
                                     );
                                   }
@@ -383,6 +384,46 @@ class _AccountScreenState extends State<AccountScreen>
                               }
                             },
                           ),
+
+                        // ✅ DEBUG: SHOW PENDING NOTIFICATIONS
+                        if (kDebugMode)
+                          _tile(
+                            icon: LucideIcons.listChecks,
+                            title: 'View Scheduled',
+                            subtitle: 'See all pending notifications',
+                            onTap: () async {
+                              final pending = await NotificationService()
+                                  .getPendingNotifications();
+                              if (mounted) {
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text(
+                                      'Scheduled Notifications',
+                                    ),
+                                    content: SingleChildScrollView(
+                                      child: Text(
+                                        pending.isEmpty
+                                            ? 'No pending notifications'
+                                            : pending
+                                                  .map(
+                                                    (n) =>
+                                                        '${n.id}: ${n.title}',
+                                                  )
+                                                  .join('\n'),
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Close'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                       ]),
                     ),
 
@@ -394,7 +435,6 @@ class _AccountScreenState extends State<AccountScreen>
                           icon: LucideIcons.lock,
                           title: 'Privacy Policy',
                           onTap: () {
-                            // TODO: Open privacy policy URL
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Privacy policy coming soon'),
@@ -406,7 +446,6 @@ class _AccountScreenState extends State<AccountScreen>
                           icon: LucideIcons.fileText,
                           title: 'Terms of Service',
                           onTap: () {
-                            // TODO: Open terms URL
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Terms of service coming soon'),
@@ -418,9 +457,7 @@ class _AccountScreenState extends State<AccountScreen>
                           icon: LucideIcons.mail,
                           title: 'Contact Support',
                           subtitle: 'support@mindur.app',
-                          onTap: () {
-                            // TODO: Open email client
-                          },
+                          onTap: () {},
                         ),
                         FutureBuilder<PackageInfo>(
                           future: PackageInfo.fromPlatform(),
@@ -456,7 +493,6 @@ class _AccountScreenState extends State<AccountScreen>
                           title: 'Delete account',
                           color: colors.error,
                           onTap: () {
-                            // TODO: Implement account deletion
                             showDialog(
                               context: context,
                               builder: (_) => AlertDialog(
@@ -471,7 +507,6 @@ class _AccountScreenState extends State<AccountScreen>
                                   ),
                                   TextButton(
                                     onPressed: () {
-                                      // TODO: Implement deletion
                                       Navigator.pop(context);
                                     },
                                     child: Text(
