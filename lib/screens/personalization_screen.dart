@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:mindur/theme/app_background.dart';
@@ -7,6 +6,7 @@ import 'package:vertical_weight_slider/vertical_weight_slider.dart';
 import '../components/homescreen_cards.dart';
 import '../components/personalized_radio_input.dart';
 import '../services/firebase_service.dart';
+import '../services/notification_service.dart';
 import 'main_screen.dart';
 
 class PersonalizationScreen extends StatefulWidget {
@@ -81,16 +81,16 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   width: 250,
                 ),
                 const SizedBox(height: 16),
-      
+
                 Text(
                   'Let\'s personalize your experience',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question: 'What would you prefer to see on your dashboard?',
                   selectedValue: 'Dog',
@@ -100,9 +100,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => petSelection = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question: 'What\'s your fitness goal?',
                   selectedValue: 'Muscle Building',
@@ -112,9 +112,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => fitnessgoal = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question: 'What’s your main goal with this app?',
                   selectedValue: 'Journaling & self-reflection',
@@ -124,9 +124,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => appgoal = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question:
                       'How often do you want reminders to reflect or journal?',
@@ -137,9 +137,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => journalreminder = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 24),
-      
+
                 /// HEIGHT
                 HomescreenCards(
                   height: 352,
@@ -168,20 +168,20 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           width: 200,
                           color: colors.primary,
                         ),
-                        onChanged: (value) =>
-                            setState(() => height = value),
+                        onChanged: (value) => setState(() => height = value),
                       ),
                       Text(
                         '${height.toStringAsFixed(1)} cm',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 /// CURRENT WEIGHT
                 HomescreenCards(
                   height: 352,
@@ -210,20 +210,20 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           width: 200,
                           color: colors.secondary,
                         ),
-                        onChanged: (value) =>
-                            setState(() => weight = value),
+                        onChanged: (value) => setState(() => weight = value),
                       ),
                       Text(
                         '${weight.toStringAsFixed(1)} kg',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 /// GOAL WEIGHT
                 HomescreenCards(
                   height: 352,
@@ -257,15 +257,16 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                       ),
                       Text(
                         '${weightGoal.toStringAsFixed(1)} kg',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 24),
-      
+
                 SizedBox(
                   width: MediaQuery.sizeOf(context).width * 0.5,
                   height: MediaQuery.sizeOf(context).width * 0.08,
@@ -282,7 +283,37 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                         );
                         return;
                       }
-      
+
+                      // ✅ REQUEST NOTIFICATION PERMISSION
+                      final notificationService = NotificationService();
+                      final permissionGranted = await notificationService
+                          .requestPermissions();
+
+                      if (permissionGranted) {
+                        // ✅ SCHEDULE JOURNAL REMINDER
+                        await notificationService.scheduleJournalReminder(
+                          journalreminder,
+                        );
+
+                        // ✅ SCHEDULE HABIT REMINDER
+                        await notificationService.scheduleHabitReminder();
+
+                        debugPrint(
+                          '✅ Notifications scheduled: $journalreminder',
+                        );
+                      } else {
+                        // Show warning but continue
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '⚠️ Notifications disabled. You can enable them later in settings.',
+                            ),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      }
+
+                      // Save personalization data
                       await FirestoreService().saveUserPersonalization(
                         petSelection: petSelection,
                         fitnessGoal: fitnessgoal,
@@ -292,12 +323,10 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                         currentWeight: weight,
                         goalWeight: weightGoal,
                       );
-      
+
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const MainScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const MainScreen()),
                       );
                     },
                     child: const Text('Next'),

@@ -10,9 +10,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
-// NEW THEME
 import 'theme/theme.dart';
 import 'theme/theme_controller.dart';
+import 'services/notification_service.dart'; // ← ADD THIS
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,8 +23,11 @@ void main() async {
   // Load env for all platforms
   await dotenv.load(fileName: ".env");
 
-  // 🔥 Load saved theme (System / Light / Dark)
+  // Load saved theme
   await AppThemeController.loadTheme();
+
+  // ✅ Initialize notifications
+  await NotificationService().initialize();
 
   runApp(const MyApp());
 }
@@ -40,14 +43,9 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           title: 'Mind-ur',
           debugShowCheckedModeBanner: false,
-
-          // ✅ Your existing themes (UNCHANGED)
           theme: MindurTheme.lightTheme(),
           darkTheme: MindurTheme.darkTheme(),
-
-          // ✅ Now fully dynamic
           themeMode: mode,
-
           home: const FirebaseInitWrapper(),
         );
       },

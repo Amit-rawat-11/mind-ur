@@ -17,6 +17,7 @@ import 'package:intl/intl.dart';
 import '../components/homescreen_cards.dart';
 import '../constant/datetime.dart';
 import '../services/firebase_service.dart';
+import '../services/notification_service.dart';
 import '../utils/chat_controller.dart';
 import 'account_screen.dart';
 
@@ -48,7 +49,6 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchUserData();
   }
 
-  // Helper method to check if a timestamp is from today
   bool _isToday(dynamic timestamp) {
     if (timestamp == null) return false;
     DateTime lastDate;
@@ -91,13 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final streakData = await JournalStreakUtil.getJournalStreak(uid);
 
-      // FIX: Map habits and reset 'isCompleted' if the completion date is not today
       final fetchedHabits = habitSnapshot.docs.map((doc) {
         final data = doc.data();
         final bool wasCompleted = data['isCompleted'] ?? false;
         final dynamic lastCompletedAt = data['lastCompletedAt'];
 
-        // If it was completed but NOT today, treat it as incomplete for the UI
         final bool isCompletedToday = wasCompleted && _isToday(lastCompletedAt);
 
         return {...data, 'isCompleted': isCompletedToday};
@@ -114,12 +112,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return;
 
+      final currentStreak = streakData['currentStreak'] ?? 0;
+
+      // ✅ TRIGGER STREAK MILESTONE NOTIFICATION
+      await NotificationService().scheduleStreakMilestone(currentStreak);
+
       setState(() {
         userProfile = profile;
         journalEntries = journalSnapshot.docs.map((doc) => doc.data()).toList();
         habits = fetchedHabits;
         habitProgress = calculatedProgress;
-        journalCurrentStreak = streakData['currentStreak'] ?? 0;
+        journalCurrentStreak = currentStreak;
         journalLongestStreak = streakData['longestStreak'] ?? 0;
         isLoading = false;
       });
@@ -296,7 +299,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Title
                             Text(
                               "🔥 What Matters Today",
                               style: theme.textTheme.titleMedium?.copyWith(
@@ -304,10 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 color: colors.onSurface,
                               ),
                             ),
-
                             const SizedBox(height: 20),
-
-                            // Progress Ring (HERO)
                             CircularPercentIndicator(
                               radius: 78,
                               lineWidth: 22,
@@ -330,8 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    "${habits.where((h) => h['isCompleted'] == true).length}"
-                                    " of ${habits.length} Habits",
+                                    "${habits.where((h) => h['isCompleted'] == true).length} of ${habits.length} Habits",
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
                                           color: colors.onSurface.withOpacity(
@@ -342,17 +340,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ],
                               ),
                             ),
-
                             const SizedBox(height: 20),
-
-                            // Habit list (secondary, quiet)
                             ListView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
                               itemCount: limitedHabits.length,
                               itemBuilder: (context, index) {
                                 final habit = limitedHabits[index];
-
                                 return Padding(
                                   padding: const EdgeInsets.only(bottom: 8),
                                   child: Container(
@@ -411,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               onPressed: () {
                                 _controller.resetAllChatsLocally();
                               },
-                              child: Text("Reset"),
+                              child: const Text("Reset"),
                             ),
                           ],
                         ),
@@ -422,5 +416,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  // 🔔 ADDED helpers
+  int _parseJournalHour(String? time) {
+    if (time == null || !time.contains(':')) return 21;
+    return int.tryParse(time.split(':')[0]) ?? 21;
+  }
+
+  int _parseJournalMinute(String? time) {
+    if (time == null || !time.contains(':')) return 0;
+    return int.tryParse(time.split(':')[1]) ?? 0;
   }
 }

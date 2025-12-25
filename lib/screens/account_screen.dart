@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/firebase_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_background.dart';
 import '../theme/theme_controller.dart' show AppThemeController;
 import '../utils/journal_streak_util.dart';
@@ -27,9 +29,10 @@ class _AccountScreenState extends State<AccountScreen>
   bool notificationsEnabled = true;
   bool isLoading = true;
 
-  late final AnimationController _fadeController =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 400))
-        ..forward();
+  late final AnimationController _fadeController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 400),
+  )..forward();
 
   @override
   void initState() {
@@ -52,15 +55,12 @@ class _AccountScreenState extends State<AccountScreen>
       displayName =
           userDoc.data()?['displayName'] ?? user?.displayName ?? 'User';
       email = user?.email ?? '';
-      notificationsEnabled =
-          userDoc.data()?['notificationsEnabled'] ?? true;
+      notificationsEnabled = userDoc.data()?['notificationsEnabled'] ?? true;
       currentStreak = streakData['currentStreak'] ?? 0;
       longestStreak = streakData['longestStreak'] ?? 0;
       isLoading = false;
     });
   }
-
-  // ===================== UI HELPERS =====================
 
   Widget _section(String title, Widget child) {
     final theme = Theme.of(context);
@@ -109,7 +109,8 @@ class _AccountScreenState extends State<AccountScreen>
       leading: Icon(icon, color: color ?? colors.onSurface),
       title: Text(title),
       subtitle: subtitle != null ? Text(subtitle) : null,
-      trailing: trailing ??
+      trailing:
+          trailing ??
           (onTap != null
               ? Icon(
                   LucideIcons.chevronRight,
@@ -120,8 +121,6 @@ class _AccountScreenState extends State<AccountScreen>
       onTap: onTap,
     );
   }
-
-  // ===================== ACTIONS =====================
 
   Future<void> _editName() async {
     final controller = TextEditingController(text: displayName);
@@ -141,8 +140,7 @@ class _AccountScreenState extends State<AccountScreen>
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () =>
-                Navigator.pop(context, controller.text.trim()),
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('Save'),
           ),
         ],
@@ -196,8 +194,6 @@ class _AccountScreenState extends State<AccountScreen>
     );
   }
 
-  // ===================== BUILD =====================
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -224,12 +220,8 @@ class _AccountScreenState extends State<AccountScreen>
                       children: [
                         CircleAvatar(
                           radius: 32,
-                          backgroundColor:
-                              colors.primary.withOpacity(0.15),
-                          child: Icon(
-                            LucideIcons.user,
-                            color: colors.primary,
-                          ),
+                          backgroundColor: colors.primary.withOpacity(0.15),
+                          child: Icon(LucideIcons.user, color: colors.primary),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
@@ -241,8 +233,7 @@ class _AccountScreenState extends State<AccountScreen>
                                   Text(
                                     displayName,
                                     style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w600),
+                                        ?.copyWith(fontWeight: FontWeight.w600),
                                   ),
                                   IconButton(
                                     icon: const Icon(
@@ -255,10 +246,9 @@ class _AccountScreenState extends State<AccountScreen>
                               ),
                               Text(
                                 email,
-                                style: theme.textTheme.labelMedium
-                                    ?.copyWith(
-                                        color: colors.onSurface
-                                            .withOpacity(0.6)),
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: colors.onSurface.withOpacity(0.6),
+                                ),
                               ),
                             ],
                           ),
@@ -295,23 +285,104 @@ class _AccountScreenState extends State<AccountScreen>
                           subtitle: 'System / Light / Dark',
                           onTap: _showThemeSelector,
                         ),
+
+                        // ✅ NOTIFICATION MANAGEMENT
                         _tile(
                           icon: LucideIcons.bell,
                           title: 'Notifications',
                           trailing: Switch(
                             value: notificationsEnabled,
                             onChanged: (val) async {
-                              setState(
-                                  () => notificationsEnabled = val);
+                              setState(() => notificationsEnabled = val);
+
+                              final notificationService = NotificationService();
+
+                              if (val) {
+                                // Re-enable notifications
+                                final granted = await notificationService
+                                    .requestPermissions();
+
+                                if (granted) {
+                                  // Fetch user's journal reminder preference
+                                  final userDoc = await FirebaseFirestore
+                                      .instance
+                                      .collection('users')
+                                      .doc(user!.uid)
+                                      .get();
+
+                                  final journalReminder =
+                                      userDoc.data()?['journalReminder'] ??
+                                      'Evening';
+
+                                  // Reschedule reminders
+                                  await notificationService
+                                      .scheduleJournalReminder(journalReminder);
+                                  await notificationService
+                                      .scheduleHabitReminder();
+
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          '✅ Notifications enabled',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                } else {
+                                  setState(() => notificationsEnabled = false);
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          '⚠️ Please enable notifications in system settings',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                }
+                              } else {
+                                // Disable notifications
+                                await notificationService.cancelAll();
+
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '🔕 Notifications disabled',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              }
+
+                              // Update Firestore
                               await FirebaseFirestore.instance
                                   .collection('users')
                                   .doc(user!.uid)
-                                  .update({
-                                'notificationsEnabled': val,
-                              });
+                                  .update({'notificationsEnabled': val});
                             },
                           ),
                         ),
+
+                        // ✅ TEST NOTIFICATION (DEBUG ONLY)
+                        if (kDebugMode)
+                          _tile(
+                            icon: LucideIcons.bellRing,
+                            title: 'Test Notification',
+                            subtitle: 'Send a test notification',
+                            onTap: () async {
+                              await NotificationService()
+                                  .showTestNotification();
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('📬 Test notification sent!'),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                       ]),
                     ),
 
@@ -322,14 +393,34 @@ class _AccountScreenState extends State<AccountScreen>
                         _tile(
                           icon: LucideIcons.lock,
                           title: 'Privacy Policy',
+                          onTap: () {
+                            // TODO: Open privacy policy URL
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Privacy policy coming soon'),
+                              ),
+                            );
+                          },
                         ),
                         _tile(
                           icon: LucideIcons.fileText,
                           title: 'Terms of Service',
+                          onTap: () {
+                            // TODO: Open terms URL
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Terms of service coming soon'),
+                              ),
+                            );
+                          },
                         ),
                         _tile(
                           icon: LucideIcons.mail,
                           title: 'Contact Support',
+                          subtitle: 'support@mindur.app',
+                          onTap: () {
+                            // TODO: Open email client
+                          },
                         ),
                         FutureBuilder<PackageInfo>(
                           future: PackageInfo.fromPlatform(),
@@ -357,13 +448,41 @@ class _AccountScreenState extends State<AccountScreen>
                           title: 'Log out',
                           onTap: () async {
                             await FirebaseAuth.instance.signOut();
-                            Navigator.pop(context);
+                            if (mounted) Navigator.pop(context);
                           },
                         ),
                         _tile(
                           icon: LucideIcons.trash2,
                           title: 'Delete account',
                           color: colors.error,
+                          onTap: () {
+                            // TODO: Implement account deletion
+                            showDialog(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('Delete Account?'),
+                                content: const Text(
+                                  'This will permanently delete all your data. This action cannot be undone.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      // TODO: Implement deletion
+                                      Navigator.pop(context);
+                                    },
+                                    child: Text(
+                                      'Delete',
+                                      style: TextStyle(color: colors.error),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                       ]),
                     ),

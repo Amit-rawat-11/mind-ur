@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-
 import '../models/food_item.dart';
 import '../models/habit.dart';
 import '../models/journal.dart';
@@ -211,9 +210,7 @@ class FirestoreService {
             'lastCompletedAt': habit.isCompleted
                 ? FieldValue.serverTimestamp()
                 : null,
-                
           });
-          
     } catch (e) {
       debugPrint("Error updating habit: $e");
     }
@@ -427,4 +424,6 @@ class FirestoreService {
       debugPrint("Error updating AI memory: $e");
     }
   }
+
+  
 }
