@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mindur/theme/app_background.dart';
 
 import '../components/input_textfield.dart';
+import '../services/analytics_service.dart';
 import '../services/signup_service.dart';
 import '../screens/signup_screen.dart';
 import '../screens/main_screen.dart';
@@ -33,10 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      _showSnack(
-        'Please enter both email and password.',
-        isError: false,
-      );
+      _showSnack('Please enter both email and password.', isError: false);
       return;
     }
 
@@ -51,12 +51,20 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = false);
 
     if (result == null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
+      // ✅ LOG SUCCESSFUL LOGIN
+      await AnalyticsService().logLogin(method: 'email');
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await AnalyticsService().setUserId(user.uid);
+      }
+
+      context.go('/');
     } else {
       _showSnack(result, isError: true);
+
+      // ✅ LOG LOGIN ERROR
+      await AnalyticsService().logError(error: result, reason: 'Login failed');
     }
   }
 
@@ -85,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 24),
-      
+
                 // Illustration (optional but clean)
                 Center(
                   child: SvgPicture.asset(
@@ -93,41 +101,38 @@ class _LoginScreenState extends State<LoginScreen> {
                     height: 220,
                   ),
                 ),
-      
+
                 const SizedBox(height: 32),
-      
-                Text(
-                  'Welcome back',
-                  style: theme.textTheme.headlineLarge,
-                ),
-      
+
+                Text('Welcome back', style: theme.textTheme.headlineLarge),
+
                 const SizedBox(height: 8),
-      
+
                 Text(
                   'Sign in to continue your journey.',
                   style: theme.textTheme.bodyMedium,
                 ),
-      
+
                 const SizedBox(height: 32),
-      
+
                 InputTextfield(
                   autofillHints: const [AutofillHints.email],
                   labelText: 'Email',
                   controller: emailController,
                   isPassword: false,
                 ),
-      
+
                 const SizedBox(height: 20),
-      
+
                 InputTextfield(
                   autofillHints: const [AutofillHints.password],
                   labelText: 'Password',
                   controller: passwordController,
                   isPassword: true,
                 ),
-      
+
                 const SizedBox(height: 32),
-      
+
                 SizedBox(
                   width: double.infinity,
                   height: 52,
@@ -138,18 +143,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text('Continue'),
                         ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SignupScreen(),
-                        ),
-                      );
+                      context.goNamed('signup');
                     },
                     child: const Text('Create a new account'),
                   ),

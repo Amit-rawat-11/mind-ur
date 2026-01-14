@@ -1,10 +1,13 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mindur/theme/app_background.dart';
 
 import '../components/input_textfield.dart';
+import '../services/analytics_service.dart';
 import '../services/signup_service.dart';
 import '../screens/login_screen.dart';
 import 'personalization_screen.dart';
@@ -100,11 +103,24 @@ class _SignupScreenState extends State<SignupScreen> {
 
     if (errorMessage != null) {
       _showSnack(errorMessage, isError: true);
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const PersonalizationScreen()),
+
+      // ✅ LOG SIGNUP ERROR
+      await AnalyticsService().logError(
+        error: errorMessage,
+        reason: 'Signup failed',
       );
+    } else {
+      // ✅ LOG SUCCESSFUL SIGNUP
+      await AnalyticsService().logSignup(method: 'email');
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await AnalyticsService().setUserId(user.uid);
+      }
+
+      if (mounted) {
+        context.go('/personalization');
+      }
     }
   }
 
@@ -255,12 +271,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   Center(
                     child: TextButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                        );
+                        context.goNamed('login');
                       },
                       child: const Text('Already have an account? Sign in'),
                     ),

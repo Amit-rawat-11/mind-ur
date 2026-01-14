@@ -3,28 +3,86 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'firebase_options.dart';
-import 'screens/login_screen.dart';
-import 'screens/main_screen.dart';
+import 'route/app_routes.dart';
 
+import 'services/boot_receiver_handler.dart';
 import 'services/api_config_service.dart';
 import 'services/notification_service.dart';
+import 'services/analytics_service.dart';  // ✅ IMPORT
 
 import 'theme/theme.dart';
 import 'theme/theme_controller.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // 📦 Local storage
   await Hive.initFlutter();
-
-  // 🎨 Load saved theme
   await AppThemeController.loadTheme();
 
+  // ✅ Initialize Firebase and Analytics
+  await _initializeApp();
+
   runApp(const MyApp());
+}
+
+/// Initialize all services before app starts
+Future<void> _initializeApp() async {
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('✅ Firebase initialized');
+
+    // ✅ SETUP CRASHLYTICS
+    if (!kIsWeb) {
+      // Pass all uncaught errors to Crashlytics
+      FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
+    }
+
+    if (kIsWeb) {
+      try {
+        await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+      } catch (_) {}
+    }
+
+    await ApiConfigService.load();
+    debugPrint('✅ API config loaded');
+
+    await NotificationService().initialize();
+    debugPrint('✅ Notification service initialized');
+
+    await BootReceiverHandler().rescheduleNotificationsAfterBoot();
+    debugPrint('✅ Notifications rescheduled');
+
+    // ✅ LOG APP OPEN (tracks DAU automatically)
+    await AnalyticsService().logAppOpen();
+    debugPrint('✅ Analytics initialized');
+
+    // ✅ SET USER ID if logged in
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await AnalyticsService().setUserId(user.uid);
+    }
+
+    FlutterNativeSplash.remove();
+  } catch (e, stackTrace) {
+    debugPrint('❌ Initialization error: $e');
+    
+    // ✅ LOG ERROR TO CRASHLYTICS
+    await AnalyticsService().logError(
+      error: e.toString(),
+      stackTrace: stackTrace,
+      reason: 'App initialization failed',
+    );
+    
+    FlutterNativeSplash.remove();
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -35,93 +93,15 @@ class MyApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: AppThemeController.themeMode,
       builder: (context, mode, _) {
-        return MaterialApp(
+        return MaterialApp.router(
           title: 'Mind-ur',
           debugShowCheckedModeBanner: false,
           theme: MindurTheme.lightTheme(),
           darkTheme: MindurTheme.darkTheme(),
           themeMode: mode,
-          home: const AppInitGate(),
+          routerConfig: AppRoutes.router,
         );
       },
     );
   }
-}
-
-class AppInitGate extends StatefulWidget {
-  const AppInitGate({super.key});
-
-  @override
-  State<AppInitGate> createState() => _AppInitGateState();
-}
-
-class _AppInitGateState extends State<AppInitGate> {
-  @override
-  void initState() {
-    super.initState();
-    _initApp();
-  }
-
-  Future<void> _initApp() async {
-    // 🔥 Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // 🌐 Web auth persistence
-    if (kIsWeb) {
-      try {
-        await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
-      } catch (_) {}
-    }
-
-    // 🔑 Load API keys
-    await ApiConfigService.load();
-
-    // 🔔 Notifications
-    await NotificationService().initialize();
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (!mounted) return;
-
-    Navigator.of(context).pushReplacement(
-      _fadeScaleRoute(
-        user != null ? const MainScreen() : const LoginScreen(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Native splash stays visible here
-    return const SizedBox.shrink();
-  }
-}
-
-/// 🎬 Fade + subtle scale transition
-PageRouteBuilder _fadeScaleRoute(Widget page) {
-  return PageRouteBuilder(
-    transitionDuration: const Duration(milliseconds: 350),
-    pageBuilder: (_, __, ___) => page,
-    transitionsBuilder: (_, animation, __, child) {
-      final fade = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOut,
-      );
-
-      final scale = Tween<double>(
-        begin: 0.98,
-        end: 1.0,
-      ).animate(fade);
-
-      return FadeTransition(
-        opacity: fade,
-        child: ScaleTransition(
-          scale: scale,
-          child: child,
-        ),
-      );
-    },
-  );
 }

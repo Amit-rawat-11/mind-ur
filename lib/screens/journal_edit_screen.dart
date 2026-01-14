@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mindur/theme/app_background.dart';
 import '../constant/datetime.dart';
 import '../models/journal.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 
 class JournalEditScreen extends StatefulWidget {
@@ -61,8 +63,33 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
 
     if (isEditing) {
       await firestoreService.updateJournalEntry(widget.documentId!, entry);
+
+      // ✅ LOG JOURNAL EDIT
+      await AnalyticsService().logJournalEdited(entryId: widget.documentId!);
     } else {
       await firestoreService.addJournalEntry(entry);
+
+      // ✅ LOG JOURNAL CREATION
+      final wordCount = content
+          .split(' ')
+          .where((word) => word.isNotEmpty)
+          .length;
+      final hour = DateTime.now().hour;
+      String timeOfDay;
+      if (hour < 12) {
+        timeOfDay = 'morning';
+      } else if (hour < 17) {
+        timeOfDay = 'afternoon';
+      } else if (hour < 21) {
+        timeOfDay = 'evening';
+      } else {
+        timeOfDay = 'night';
+      }
+
+      await AnalyticsService().logJournalCreated(
+        wordCount: wordCount,
+        timeOfDay: timeOfDay,
+      );
     }
 
     final colors = Theme.of(context).colorScheme;
@@ -79,14 +106,12 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
         backgroundColor: colors.secondary,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
 
-    Navigator.pop(context);
+    context.pop();
   }
 
   @override
@@ -120,10 +145,7 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
           foregroundColor: colors.onSurface,
           elevation: 0,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.save),
-              onPressed: saveEntry,
-            ),
+            IconButton(icon: const Icon(Icons.save), onPressed: saveEntry),
           ],
         ),
         body: SafeArea(
@@ -139,7 +161,7 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
                     labelText: 'Heading',
                     labelStyle: theme.textTheme.bodyMedium,
                     filled: true,
-                    fillColor: colors.surfaceVariant,
+                    fillColor: colors.surfaceContainerHighest,
                     border: normalBorder,
                     focusedBorder: normalBorder.copyWith(
                       borderSide: BorderSide(color: colors.primary),
@@ -150,7 +172,7 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-      
+
                 // Content field
                 TextField(
                   controller: contentController,
@@ -159,7 +181,7 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
                     labelText: 'Journal Entry',
                     labelStyle: theme.textTheme.bodyMedium,
                     filled: true,
-                    fillColor: colors.surfaceVariant,
+                    fillColor: colors.surfaceContainerHighest,
                     border: normalBorder,
                     focusedBorder: normalBorder.copyWith(
                       borderSide: BorderSide(color: colors.primary),
@@ -170,7 +192,7 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-      
+
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.55,
                   height: MediaQuery.of(context).size.width * 0.12,

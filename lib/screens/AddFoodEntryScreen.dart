@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mindur/theme/app_background.dart';
 import '../constant/datetime.dart';
 import '../models/food_item.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 
 class FoodLoggingScreen extends StatefulWidget {
@@ -50,6 +52,13 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
 
     await firestoreService.logFood(foodItem);
 
+    // ✅ LOG FOOD LOGGED
+    await AnalyticsService().logFoodLogged(
+      foodName: foodItem.name,
+      calories: foodItem.calories,
+      protein: foodItem.protein,
+    );
+
     foodNameController.clear();
     caloriesController.clear();
     proteinController.clear();
@@ -64,7 +73,7 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
     );
 
     setState(() {});
-    Navigator.pop(context);
+    context.pop();
   }
 
   @override
@@ -81,7 +90,7 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
           foregroundColor: colors.onSurface,
           elevation: 0,
           leading: IconButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             icon: const Icon(LucideIcons.chevronLeft),
           ),
         ),

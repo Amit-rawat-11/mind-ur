@@ -2,9 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:mindur/screens/login_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_background.dart';
@@ -136,11 +139,11 @@ class _AccountScreenState extends State<AccountScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () => context.pop(controller.text.trim()),
             child: const Text('Save'),
           ),
         ],
@@ -169,7 +172,7 @@ class _AccountScreenState extends State<AccountScreen>
             title: 'System',
             onTap: () {
               AppThemeController.setTheme(ThemeMode.system);
-              Navigator.pop(context);
+              context.pop();
             },
           ),
           _tile(
@@ -177,7 +180,7 @@ class _AccountScreenState extends State<AccountScreen>
             title: 'Light',
             onTap: () {
               AppThemeController.setTheme(ThemeMode.light);
-              Navigator.pop(context);
+              context.pop();
             },
           ),
           _tile(
@@ -185,7 +188,7 @@ class _AccountScreenState extends State<AccountScreen>
             title: 'Dark',
             onTap: () {
               AppThemeController.setTheme(ThemeMode.dark);
-              Navigator.pop(context);
+              context.pop();
             },
           ),
           const SizedBox(height: 16),
@@ -290,6 +293,9 @@ class _AccountScreenState extends State<AccountScreen>
                         _tile(
                           icon: LucideIcons.bell,
                           title: 'Notifications',
+                          subtitle: notificationsEnabled
+                              ? 'Enabled with smart scheduling'
+                              : 'Disabled',
                           trailing: Switch(
                             value: notificationsEnabled,
                             onChanged: (val) async {
@@ -314,7 +320,7 @@ class _AccountScreenState extends State<AccountScreen>
                                       userDoc.data()?['journalReminder'] ??
                                       'Evening';
 
-                                  // ✅ SCHEDULE ALL NOTIFICATIONS (with smart features)
+                                  // ✅ SCHEDULE ALL NOTIFICATIONS
                                   await notificationService
                                       .scheduleAllNotifications(
                                         journalReminder,
@@ -371,7 +377,7 @@ class _AccountScreenState extends State<AccountScreen>
                           _tile(
                             icon: LucideIcons.bellRing,
                             title: 'Test Notification',
-                            subtitle: 'Send a test notification',
+                            subtitle: 'Send a test notification now',
                             onTap: () async {
                               await NotificationService()
                                   .showTestNotification();
@@ -402,23 +408,71 @@ class _AccountScreenState extends State<AccountScreen>
                                       'Scheduled Notifications',
                                     ),
                                     content: SingleChildScrollView(
-                                      child: Text(
-                                        pending.isEmpty
-                                            ? 'No pending notifications'
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: pending.isEmpty
+                                            ? [
+                                                const Text(
+                                                  'No pending notifications',
+                                                ),
+                                              ]
                                             : pending
                                                   .map(
-                                                    (n) =>
-                                                        '${n.id}: ${n.title}',
+                                                    (n) => Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            bottom: 8,
+                                                          ),
+                                                      child: Text(
+                                                        'ID ${n.id}: ${n.title}\n${n.body}',
+                                                        style: const TextStyle(
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ),
                                                   )
-                                                  .join('\n'),
+                                                  .toList(),
                                       ),
                                     ),
                                     actions: [
                                       TextButton(
-                                        onPressed: () => Navigator.pop(context),
+                                        onPressed: () => context.pop(),
                                         child: const Text('Close'),
                                       ),
                                     ],
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+
+                        // ✅ DEBUG: RESCHEDULE NOW
+                        if (kDebugMode)
+                          _tile(
+                            icon: LucideIcons.refreshCw,
+                            title: 'Reschedule Notifications',
+                            subtitle: 'Force reschedule all notifications',
+                            onTap: () async {
+                              final userDoc = await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user!.uid)
+                                  .get();
+
+                              final journalReminder =
+                                  userDoc.data()?['journalReminder'] ??
+                                  'Evening';
+
+                              await NotificationService()
+                                  .scheduleAllNotifications(journalReminder);
+
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      '✅ Notifications rescheduled!',
+                                    ),
                                   ),
                                 );
                               }
@@ -484,8 +538,15 @@ class _AccountScreenState extends State<AccountScreen>
                           icon: LucideIcons.logOut,
                           title: 'Log out',
                           onTap: () async {
+                            // ✅ LOG SESSION END BEFORE LOGOUT
+                            
+
                             await FirebaseAuth.instance.signOut();
-                            if (mounted) Navigator.pop(context);
+
+                            // ✅ CLEAR USER ID
+                            await AnalyticsService().setUserId(null);
+
+                            if (mounted) context.go('/login');
                           },
                         ),
                         _tile(
@@ -502,12 +563,14 @@ class _AccountScreenState extends State<AccountScreen>
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context),
+                                    onPressed: () => context.pop(),
                                     child: const Text('Cancel'),
                                   ),
                                   TextButton(
                                     onPressed: () {
-                                      Navigator.pop(context);
+                                      FirebaseAuth.instance.currentUser
+                                          ?.delete();
+                                      context.go('/login');
                                     },
                                     child: Text(
                                       'Delete',

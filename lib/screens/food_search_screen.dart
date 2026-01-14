@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mindur/theme/app_background.dart';
 
 import '../components/search_card.dart';
 import '../models/food_item.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import 'AddFoodEntryScreen.dart';
 
@@ -43,9 +45,7 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
     _fadeAnimation = Tween<double>(
       begin: 0,
       end: 1,
-    ).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
-    );
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeIn));
   }
 
   @override
@@ -56,8 +56,9 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
 
   Future<void> fetchAllFoods() async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('foods').get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('foods')
+          .get();
 
       final data = snapshot.docs.map((doc) => doc.data()).toList();
 
@@ -118,17 +119,12 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
           elevation: 0,
           leading: IconButton(
             icon: const Icon(LucideIcons.chevronLeft),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
           ),
           actions: [
             IconButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FoodLoggingScreen(),
-                  ),
-                );
+                context.pushNamed('food-add');
               },
               icon: const Icon(LucideIcons.edit),
             ),
@@ -139,187 +135,183 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
               : allFoods.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No food items found",
-                        style: theme.textTheme.bodyMedium,
+              ? Center(
+                  child: Text(
+                    "No food items found",
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                )
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 24,
                       ),
-                    )
-                  : Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 24,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              TextField(
-                                onChanged: updateSearch,
-                                decoration: InputDecoration(
-                                  filled: true,
-                                  fillColor:
-                                      colors.surfaceVariant.withOpacity(0.6),
-                                  hintText: 'Search for food',
-                                  prefixIcon: const Icon(Icons.search),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            onChanged: (value) {
+                              updateSearch(value);
+
+                              // ✅ LOG FOOD SEARCH (only if query is meaningful)
+                              if (value.trim().length > 2) {
+                                AnalyticsService().logFoodSearch(
+                                  query: value.trim(),
+                                );
+                              }
+                            },
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: colors.surfaceContainerHighest
+                                  .withOpacity(0.6),
+                              hintText: 'Search for food',
+                              prefixIcon: const Icon(Icons.search),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
                               ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Text(
-                                    '💪 High Protein',
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                  Switch(
-                                    value: highProteinOnly,
-                                    onChanged: (value) {
-                                      setState(
-                                          () => highProteinOnly = value);
-                                      updateSearch('');
-                                    },
-                                  ),
-                                  const Spacer(),
-                                  Text(
-                                    '🥦 Veg',
-                                    style: theme.textTheme.bodyMedium,
-                                  ),
-                                  Switch(
-                                    value: vegOnly,
-                                    onChanged: (value) {
-                                      setState(() => vegOnly = value);
-                                      updateSearch('');
-                                    },
-                                  ),
-                                ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Text(
+                                '💪 High Protein',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              Switch(
+                                value: highProteinOnly,
+                                onChanged: (value) {
+                                  setState(() => highProteinOnly = value);
+                                  updateSearch('');
+                                },
+                              ),
+                              const Spacer(),
+                              Text('🥦 Veg', style: theme.textTheme.bodyMedium),
+                              Switch(
+                                value: vegOnly,
+                                onChanged: (value) {
+                                  setState(() => vegOnly = value);
+                                  updateSearch('');
+                                },
                               ),
                             ],
                           ),
-                        ),
-                        Expanded(
-                          child: FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: ListView.builder(
-                              itemCount: searchResults.length,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemBuilder: (context, index) {
-                                final food = searchResults[index];
-      
-                                return Padding(
-                                  padding:
-                                      const EdgeInsets.only(bottom: 12),
-                                  child: SearchCard(
-                                    witdh: width,
-                                    height: height * 0.08,
-                                    title:
-                                        "${food['isVeg'] == true ? '🌱' : '🍗'} ${food['name']}",
-                                    description:
-                                        "${food['protein']}g Protein | ${food['calories']} Cal | ${food['servingSize']}",
-                                    onPressed: () async {
-                                      final result = await showDialog<int>(
-                                        context: context,
-                                        builder: (context) {
-                                          final controller =
-                                              TextEditingController(
-                                                  text: "1");
-      
-                                          return AlertDialog(
-                                            backgroundColor:
-                                                colors.surface,
-                                            title:
-                                                const Text('Enter Quantity'),
-                                            content: SizedBox(
-                                              width: width,
-                                              child: Column(
-                                                mainAxisSize:
-                                                    MainAxisSize.min,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment
-                                                        .start,
-                                                children: [
-                                                  TextField(
-                                                    controller: controller,
-                                                    keyboardType:
-                                                        TextInputType.number,
-                                                    decoration:
-                                                        const InputDecoration(
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: ListView.builder(
+                          itemCount: searchResults.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemBuilder: (context, index) {
+                            final food = searchResults[index];
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: SearchCard(
+                                witdh: width,
+                                height: height * 0.08,
+                                title:
+                                    "${food['isVeg'] == true ? '🌱' : '🍗'} ${food['name']}",
+                                description:
+                                    "${food['protein']}g Protein | ${food['calories']} Cal | ${food['servingSize']}",
+                                onPressed: () async {
+                                  final result = await showDialog<int>(
+                                    context: context,
+                                    builder: (context) {
+                                      final controller = TextEditingController(
+                                        text: "1",
+                                      );
+
+                                      return AlertDialog(
+                                        backgroundColor: colors.surface,
+                                        title: const Text('Enter Quantity'),
+                                        content: SizedBox(
+                                          width: width,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              TextField(
+                                                controller: controller,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                decoration:
+                                                    const InputDecoration(
                                                       hintText:
                                                           "How many servings?",
                                                     ),
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                  Text(
-                                                    "Serving Size: ${food['servingSize']}",
-                                                    style: theme
-                                                        .textTheme
-                                                        .bodySmall,
-                                                  ),
-                                                  const SizedBox(height: 16),
-                                                ],
                                               ),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(
-                                                        context),
-                                                child:
-                                                    const Text('Cancel'),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                "Serving Size: ${food['servingSize']}",
+                                                style:
+                                                    theme.textTheme.bodySmall,
                                               ),
-                                              ElevatedButton(
-                                                onPressed: () {
-                                                  Navigator.of(context).pop(
-                                                    int.tryParse(
-                                                          controller.text,
-                                                        ) ??
-                                                        1,
-                                                  );
-                                                },
-                                                child:
-                                                    const Text("Log Food"),
-                                              ),
+                                              const SizedBox(height: 16),
                                             ],
-                                          );
-                                        },
-                                      );
-      
-                                      if (result != null) {
-                                        final foodItem = FoodItem(
-                                          name: food['name'],
-                                          quantity: result,
-                                          calories:
-                                              food['calories'] * result,
-                                          protein:
-                                              food['protein'] * result,
-                                        );
-      
-                                        firestoreService.logFood(foodItem);
-      
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              '${foodItem.name} x$result logged!',
-                                            ),
                                           ),
-                                        );
-                                      }
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => context.pop(),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              context.pop(
+                                                int.tryParse(
+                                                  controller.text.trim(),
+                                                ),
+                                              );
+                                            },
+                                            child: const Text("Log Food"),
+                                          ),
+                                        ],
+                                      );
                                     },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
+                                  );
+
+                                  if (result != null) {
+                                    final foodItem = FoodItem(
+                                      name: food['name'],
+                                      quantity: result,
+                                      calories: food['calories'] * result,
+                                      protein: food['protein'] * result,
+                                    );
+
+                                    firestoreService.logFood(foodItem);
+
+                                    // ✅ LOG FOOD LOGGED
+                                    await AnalyticsService().logFoodLogged(
+                                      foodName: foodItem.name,
+                                      calories: foodItem.calories,
+                                      protein: foodItem.protein,
+                                    );
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          '${foodItem.name} x$result logged!',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            );
+                          },
                         ),
-                      ],
+                      ),
                     ),
+                  ],
+                ),
         ),
       ),
     );

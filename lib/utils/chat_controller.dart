@@ -34,8 +34,8 @@ class ChatController {
   // =============================
   // USER MEMORY
   // =============================
-  final List<String> _userMemory = [];
-  final bool _memoryLoaded = false;
+  // final List<String> _userMemory = [];
+  // final bool _memoryLoaded = false;
 
   // =============================
   // SESSION TRACKING
@@ -68,7 +68,7 @@ SAFETY:
 - Never give medical diagnoses or unsafe advice.
 - If a message suggests self-harm or crisis, gently encourage seeking help or talking to someone trusted.
 
-Stay consistent as **Dr. Aurora**, Mind-ur caring AI therapist. 💜
+Stay consistent as **Dr. Aurora**, Mind-ur caring AI therapist. ❤️
 """;
 
   ChatController() {
@@ -205,7 +205,7 @@ Stay consistent as **Dr. Aurora**, Mind-ur caring AI therapist. 💜
     if (currentSessionId == null || _isDisposed) return;
 
     const greetingText =
-        "Hey there! I’m Aurora 💜, your AI companion. What's on your mind today?";
+        "Hey there! I’m Aurora ❤️, your AI companion. What's on your mind today?";
 
     final greeting = ChatMessage(
       sessionId: currentSessionId!,
@@ -441,7 +441,6 @@ Stay consistent as **Dr. Aurora**, Mind-ur caring AI therapist. 💜
     isTypingNotifier.dispose();
     isSendingNotifier.dispose();
     scrollController.dispose();
-
     _thinkingTimer?.cancel();
     _sendWatchdog?.cancel();
   }

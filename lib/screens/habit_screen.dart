@@ -5,6 +5,7 @@ import 'package:mindur/models/habit.dart';
 import '../components/add_habit_dialog.dart';
 import '../components/habit_tile.dart';
 import '../constant/datetime.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 
 class HabitScreen extends StatefulWidget {
@@ -35,7 +36,19 @@ class _HabitScreenState extends State<HabitScreen> {
   }
 
   void deletehabiit(String habitId) async {
+    // Find the habit to get its data before deleting
+    final habitToDelete = habits.firstWhere((h) => h.id == habitId);
+
+    // Calculate days active
+    final daysActive = DateTime.now()
+        .difference(habitToDelete.startDate)
+        .inDays;
+
     await _firestoreService.deleteHabit(habitId);
+
+    // ✅ LOG HABIT DELETION
+    await AnalyticsService().logHabitDeleted(daysActive: daysActive);
+
     setState(() {
       habits.removeWhere((habit) => habit.id == habitId);
     });
@@ -73,7 +86,6 @@ class _HabitScreenState extends State<HabitScreen> {
           habit.completedDates.add(today);
         }
 
-        // 🔥 THIS WAS MISSING
         habit.lastCompletedAt = now;
       } else {
         habit.completedDates.removeWhere(
@@ -90,6 +102,15 @@ class _HabitScreenState extends State<HabitScreen> {
     if (habit.id != null) {
       await _firestoreService.updateHabit(habit.id!, habit);
     }
+
+    // ✅ LOG HABIT COMPLETION
+    if (value) {
+      final streakDays = habit.completedDates.length;
+      await AnalyticsService().logHabitCompleted(
+        habitName: habit.title,
+        streakDays: streakDays,
+      );
+    }
   }
 
   void _showAddHabitDialog() async {
@@ -97,8 +118,16 @@ class _HabitScreenState extends State<HabitScreen> {
       context: context,
       builder: (context) => const AddHabitDialog(),
     );
+
     if (result != null) {
       await _firestoreService.addHabits(result);
+
+      // ✅ LOG HABIT CREATION
+      await AnalyticsService().logHabitCreated(
+        priority: result.priority,
+        habitName: result.title,
+      );
+
       _loadHabits();
     }
   }

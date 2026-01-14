@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mindur/theme/app_background.dart';
 import 'package:vertical_weight_slider/vertical_weight_slider.dart';
 
 import '../components/homescreen_cards.dart';
 import '../components/personalized_radio_input.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../services/notification_service.dart';
 import 'main_screen.dart';
@@ -29,6 +31,8 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
   double weight = 40.0;
   double weightGoal = 70.0;
   double height = 120.0;
+
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -81,16 +85,16 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   width: 250,
                 ),
                 const SizedBox(height: 16),
-      
+
                 Text(
                   'Let\'s personalize your experience',
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question: 'What would you prefer to see on your dashboard?',
                   selectedValue: 'Dog',
@@ -100,9 +104,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => petSelection = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question: 'What\'s your fitness goal?',
                   selectedValue: 'Muscle Building',
@@ -112,9 +116,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => fitnessgoal = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question: 'What\'s your main goal with this app?',
                   selectedValue: 'Journaling & self-reflection',
@@ -124,9 +128,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => appgoal = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 PerosnalizedRadioInput(
                   question:
                       'How often do you want reminders to reflect or journal?',
@@ -137,9 +141,9 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                   onChanged: (value) =>
                       setState(() => journalreminder = value.toString()),
                 ),
-      
+
                 const SizedBox(height: 24),
-      
+
                 /// HEIGHT
                 HomescreenCards(
                   height: 352,
@@ -168,20 +172,20 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           width: 200,
                           color: colors.primary,
                         ),
-                        onChanged: (value) =>
-                            setState(() => height = value),
+                        onChanged: (value) => setState(() => height = value),
                       ),
                       Text(
                         '${height.toStringAsFixed(1)} cm',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 /// CURRENT WEIGHT
                 HomescreenCards(
                   height: 352,
@@ -210,20 +214,20 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                           width: 200,
                           color: colors.secondary,
                         ),
-                        onChanged: (value) =>
-                            setState(() => weight = value),
+                        onChanged: (value) => setState(() => weight = value),
                       ),
                       Text(
                         '${weight.toStringAsFixed(1)} kg',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 16),
-      
+
                 /// GOAL WEIGHT
                 HomescreenCards(
                   height: 352,
@@ -257,15 +261,16 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                       ),
                       Text(
                         '${weightGoal.toStringAsFixed(1)} kg',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 24),
-      
+
                 SizedBox(
                   width: MediaQuery.sizeOf(context).width * 0.5,
                   height: MediaQuery.sizeOf(context).width * 0.08,
@@ -282,28 +287,49 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                         );
                         return;
                       }
-      
+
                       // ✅ REQUEST NOTIFICATION PERMISSION
                       final notificationService = NotificationService();
-                      final permissionGranted = await notificationService.requestPermissions();
-      
+                      final permissionGranted = await notificationService
+                          .requestPermissions();
+
                       if (permissionGranted) {
                         // 🆕 SCHEDULE ALL NOTIFICATIONS AT ONCE
-                        await notificationService.scheduleAllNotifications(journalreminder);
-                        
-                        debugPrint('✅ All notifications scheduled successfully!');
+                        await notificationService.scheduleAllNotifications(
+                          journalreminder,
+                        );
+
+                        debugPrint(
+                          '✅ All notifications scheduled successfully!',
+                        );
                       } else {
                         // Show warning but continue
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('⚠️ Notifications disabled. You can enable them later in settings.'),
+                              content: Text(
+                                '⚠️ Notifications disabled. You can enable them later in settings.',
+                              ),
                               duration: Duration(seconds: 3),
                             ),
                           );
                         }
                       }
-      
+
+                      // ✅ LOG PERSONALIZATION COMPLETION
+                      await AnalyticsService().logPersonalizationCompleted(
+                        fitnessGoal: fitnessgoal,
+                        appGoal: appgoal,
+                        notificationTime: journalreminder,
+                      );
+
+                      // ✅ SET USER PROPERTIES
+                      await AnalyticsService().setUserProperties(
+                        fitnessGoal: fitnessgoal,
+                        appGoal: appgoal,
+                        notificationPreference: journalreminder,
+                      );
+
                       // Save personalization data
                       await FirestoreService().saveUserPersonalization(
                         petSelection: petSelection,
@@ -314,17 +340,12 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
                         currentWeight: weight,
                         goalWeight: weightGoal,
                       );
-      
+
                       if (mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MainScreen(),
-                          ),
-                        );
+                        context.go('/');
                       }
                     },
-                    child: const Text('Next'),
+                    child: Center(child: const Text('Next')),
                   ),
                 ),
               ],
@@ -333,5 +354,90 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleNext() async {
+    // Validate inputs
+    if (petSelection.isEmpty ||
+        fitnessgoal.isEmpty ||
+        appgoal.isEmpty ||
+        journalreminder.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ Please answer all questions!')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      // ✅ STEP 1: Request notification permissions
+      final notificationService = NotificationService();
+      final permissionGranted = await notificationService.requestPermissions();
+
+      if (!permissionGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                '⚠️ Notifications disabled. You can enable them later in settings.',
+              ),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+
+      // ✅ STEP 2: Schedule all notifications at once
+      if (permissionGranted) {
+        await notificationService.scheduleAllNotifications(journalreminder);
+        debugPrint('✅ All notifications scheduled successfully!');
+      }
+
+      // ✅ STEP 3: Save personalization data to Firestore
+      await FirestoreService().saveUserPersonalization(
+        petSelection: petSelection,
+        fitnessGoal: fitnessgoal,
+        appGoal: appgoal,
+        journalReminder: journalreminder,
+        height: height,
+        currentWeight: weight,
+        goalWeight: weightGoal,
+      );
+
+      debugPrint('✅ User personalization saved');
+
+      if (mounted) {
+        // ✅ STEP 4: Navigate to main screen
+        context.goNamed('home');
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              permissionGranted
+                  ? '✅ Setup complete! Notifications enabled.'
+                  : '✅ Setup complete!',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error during personalization: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: ${e.toString()}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
   }
 }

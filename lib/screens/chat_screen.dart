@@ -1,11 +1,13 @@
 // lib/screens/chat_screen.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mindur/theme/app_background.dart';
 import '../components/chat_screen_widgets/chat_drawer.dart';
 import '../components/chat_screen_widgets/input_bar.dart';
 import '../components/chat_screen_widgets/message_bubble.dart';
 import '../components/chat_screen_widgets/typing_indicator.dart';
 import '../models/chat_model.dart';
+import '../services/analytics_service.dart';
 import '../utils/chat_controller.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -24,6 +26,8 @@ class _ChatScreenState extends State<ChatScreen>
   bool _showScrollFAB = false;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  late DateTime _sessionStartTime;
 
   @override
   void initState() {
@@ -62,6 +66,9 @@ class _ChatScreenState extends State<ChatScreen>
 
     await _controller.sendInitialGreeting();
     debugPrint('[InitSession] Sent initial AI greeting.');
+
+    // ✅ LOG CHAT SESSION START
+    await AnalyticsService().logChatSessionStarted();
   }
 
   void _sendMessage() {
@@ -70,16 +77,27 @@ class _ChatScreenState extends State<ChatScreen>
 
     _inputController.clear();
     debugPrint('[SendMessage] User message: $text');
+
+    // ✅ LOG CHAT MESSAGE
+    AnalyticsService().logChatMessageSent(messageLength: text.length);
+
     _controller.sendMessage(text);
   }
 
   @override
   void dispose() {
+    // ✅ LOG CHAT SESSION END
+    final duration = DateTime.now().difference(_sessionStartTime);
+    final messageCount = _controller.messagesNotifier.value
+        .where((m) => m.isUser)
+        .length;
+
+    AnalyticsService().logChatSessionEnded(
+      duration: duration,
+      messageCount: messageCount,
+    );
+
     // 🔔 SESSION END SIGNAL (screen switch / back navigation)
-    // This will later:
-    // - evaluate if the session was meaningful
-    // - generate an insight
-    // - update user memory
     _controller.onSessionEnd();
 
     _controller.dispose();
@@ -104,7 +122,7 @@ class _ChatScreenState extends State<ChatScreen>
               sessions: sessions,
               onSessionTap: (sessionId) async {
                 if (_scaffoldKey.currentState?.isEndDrawerOpen ?? false) {
-                  Navigator.of(context).pop();
+                  context.pop();
                 }
                 await _controller.loadSession(sessionId);
               },
@@ -118,11 +136,11 @@ class _ChatScreenState extends State<ChatScreen>
                     ),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.pop(context, false),
+                        onPressed: () => context.pop(false),
                         child: const Text('Cancel'),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.pop(context, true),
+                        onPressed: () => context.pop(true),
                         child: const Text('Delete'),
                       ),
                     ],

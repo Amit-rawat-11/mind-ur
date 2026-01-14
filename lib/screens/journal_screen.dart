@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:mindur/theme/app_background.dart';
 
 import '../components/recent_entry_card.dart';
+import '../services/analytics_service.dart';
 import 'journal_edit_screen.dart';
 
 class JournalScreen extends StatefulWidget {
@@ -43,6 +45,9 @@ class _JournalScreenState extends State<JournalScreen> {
         .collection('journals')
         .doc(entryId)
         .delete();
+
+    // ✅ LOG JOURNAL DELETION
+    await AnalyticsService().logJournalDeleted();
   }
 
   @override
@@ -63,12 +68,7 @@ class _JournalScreenState extends State<JournalScreen> {
             IconButton(
               icon: const Icon(Icons.add),
               onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const JournalEditScreen(),
-                  ),
-                );
+                await context.pushNamed('journal-new');
                 setState(() {});
               },
             ),
@@ -80,7 +80,7 @@ class _JournalScreenState extends State<JournalScreen> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-      
+
             if (snapshot.hasError) {
               return Center(
                 child: Text(
@@ -89,9 +89,9 @@ class _JournalScreenState extends State<JournalScreen> {
                 ),
               );
             }
-      
+
             final entries = snapshot.data ?? [];
-      
+
             // Demo journals
             if (entries.isEmpty) {
               final demoJournals = [
@@ -106,7 +106,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       'Tap on any journal card to edit or view the details.',
                 },
               ];
-      
+
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: demoJournals.length,
@@ -121,7 +121,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 },
               );
             }
-      
+
             // Actual journals
             return ListView.builder(
               padding: const EdgeInsets.all(16),
@@ -130,7 +130,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 final entry = entries[index];
                 final title = entry['title'] ?? 'No Title';
                 final content = entry['content'] ?? 'No Content';
-      
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Slidable(
@@ -154,12 +154,9 @@ class _JournalScreenState extends State<JournalScreen> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
                       onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                JournalEditScreen(documentId: entry.id),
-                          ),
+                        await context.pushNamed(
+                          'journal-edit',
+                          pathParameters: {'id': entry.id},
                         );
                         setState(() {});
                       },

@@ -18,7 +18,7 @@ class NotificationService {
 
   bool _initialized = false;
 
-  // Notification IDs
+  // ==================== NOTIFICATION IDS ====================
   static const int journalReminderMorning = 100;
   static const int journalReminderEvening = 101;
   static const int journalReminderNight = 102;
@@ -36,17 +36,21 @@ class NotificationService {
   static const int midWeekCheckIn = 402;
   static const int weekendReflection = 403;
   
-  // 🆕 NEW: Achievement & Summary IDs
   static const int achievementBadge = 500;
   static const int dailySummary = 501;
 
-  /// Initialize notification service
+  // ==================== INITIALIZATION ====================
+  
+  /// 🆕 CRITICAL FIX: Initialize with proper channels
   Future<void> initialize() async {
     if (_initialized) return;
 
     try {
       tz.initializeTimeZones();
       tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+
+      // 🆕 Create all notification channels FIRST
+      await _createNotificationChannels();
 
       const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosSettings = DarwinInitializationSettings(
@@ -66,19 +70,171 @@ class NotificationService {
       );
 
       _initialized = true;
-      debugPrint('✅ Notification service initialized');
+      debugPrint('✅ Notification service initialized with channels');
     } catch (e) {
       debugPrint('❌ Notification initialization error: $e');
     }
   }
 
-  /// 🆕 FEATURE 9: Track notification opens
+  /// 🆕 CRITICAL: Create all notification channels at startup
+  Future<void> _createNotificationChannels() async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin == null) return;
+
+    // Channel 1: Journal Reminders
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'journal_reminder',
+        'Journal Reminders',
+        description: 'Daily reminders to write in your journal',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+
+    // Channel 2: Habit Check-ins
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'habit_checkins',
+        'Habit Check-ins',
+        description: 'Regular reminders to check and complete your habits',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+
+    // Channel 3: Streak Protection
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'streak_protection',
+        'Streak Protection',
+        description: 'Alerts when your journal streak is at risk',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+
+    // Channel 4: Achievements
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'achievements',
+        'Achievements',
+        description: 'Achievement badges and milestones',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+
+    // Channel 5: Engagement
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'engagement',
+        'Weekly Reviews & Motivation',
+        description: 'Weekly reviews and motivational content',
+        importance: Importance.defaultImportance,
+        playSound: true,
+        enableVibration: false,
+        showBadge: true,
+      ),
+    );
+
+    // Channel 6: Daily Summary
+    await androidPlugin.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'summary',
+        'Daily Summaries',
+        description: 'End of day progress summaries',
+        importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
+        showBadge: true,
+      ),
+    );
+
+    debugPrint('✅ All notification channels created');
+  }
+
+  // ==================== PERMISSIONS ====================
+  
+  /// 🆕 CRITICAL: Request all necessary permissions
+  Future<bool> requestPermissions() async {
+    try {
+      // 1. Request notification permission (Android 13+)
+      final notificationStatus = await Permission.notification.request();
+      if (!notificationStatus.isGranted) {
+        debugPrint('❌ Notification permission denied');
+        return false;
+      }
+
+      // 2. Request exact alarm permission (Android 12+)
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final alarmStatus = await Permission.scheduleExactAlarm.request();
+        if (!alarmStatus.isGranted) {
+          debugPrint('⚠️ Exact alarm permission denied - notifications may be delayed');
+        }
+      }
+
+      // 3. Request battery optimization exemption
+      await _requestBatteryOptimizationExemption();
+
+      // 4. iOS permissions
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        final granted = await _notifications
+            .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>()
+            ?.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+        return granted ?? false;
+      }
+
+      debugPrint('✅ All permissions granted');
+      return true;
+    } catch (e) {
+      debugPrint('❌ Permission request error: $e');
+      return false;
+    }
+  }
+
+  /// 🆕 Request battery optimization exemption (critical for background work)
+  Future<void> _requestBatteryOptimizationExemption() async {
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      
+      if (!status.isGranted) {
+        final result = await Permission.ignoreBatteryOptimizations.request();
+        
+        if (result.isGranted) {
+          debugPrint('✅ Battery optimization exemption granted');
+        } else {
+          debugPrint('⚠️ Battery optimization exemption denied - notifications may not work in background');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Battery optimization request not supported: $e');
+    }
+  }
+
+  // ==================== ANALYTICS ====================
+  
+  /// Track notification opens
   void _onNotificationTapped(NotificationResponse response) {
     debugPrint('Notification tapped: ${response.payload}');
     _trackNotificationOpen(response.id ?? 0, response.payload ?? 'unknown');
   }
 
-  /// 🆕 FEATURE 9: Analytics - Track notification opens
   Future<void> _trackNotificationOpen(int notificationId, String type) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -100,25 +256,8 @@ class NotificationService {
     }
   }
 
-  /// Request notification permissions
-  Future<bool> requestPermissions() async {
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      final status = await Permission.notification.request();
-      return status.isGranted;
-    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final granted = await _notifications
-          .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
-      return granted ?? false;
-    }
-    return true;
-  }
-
+  // ==================== SHOW NOTIFICATION ====================
+  
   /// Show immediate notification
   Future<void> showNotification({
     required int id,
@@ -129,7 +268,6 @@ class NotificationService {
     String? channelName,
     Importance importance = Importance.high,
   }) async {
-    // 🆕 FEATURE 3: Proper notification channels
     final androidDetails = AndroidNotificationDetails(
       channelId ?? 'mindur_channel',
       channelName ?? 'Mind-ur Notifications',
@@ -137,6 +275,8 @@ class NotificationService {
       importance: importance,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
+      playSound: true,
+      enableVibration: true,
       groupKey: _getGroupKey(id),
     );
 
@@ -154,27 +294,22 @@ class NotificationService {
     await _notifications.show(id, title, body, details, payload: payload);
   }
 
-  /// 🆕 FEATURE 3: Get notification group key
   String _getGroupKey(int notificationId) {
-    if (notificationId >= 200 && notificationId <= 203) {
-      return 'habit_checkins';
-    } else if (notificationId >= 100 && notificationId <= 102) {
-      return 'journal_reminders';
-    } else if (notificationId >= 400 && notificationId <= 403) {
-      return 'engagement';
-    } else if (notificationId >= 500 && notificationId <= 501) {
-      return 'achievements';
-    }
+    if (notificationId >= 200 && notificationId <= 203) return 'habit_checkins';
+    if (notificationId >= 100 && notificationId <= 102) return 'journal_reminders';
+    if (notificationId >= 400 && notificationId <= 403) return 'engagement';
+    if (notificationId >= 500 && notificationId <= 501) return 'achievements';
     return 'general';
   }
 
-  /// 🆕 FEATURE 2: Get smart scheduled time based on user behavior
+  // ==================== SMART SCHEDULING ====================
+  
+  /// Get smart scheduled time based on user behavior
   Future<int> _getSmartHour(String timeSlot, int defaultHour) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return defaultHour;
 
     try {
-      // Check if we have enough data (at least 7 days)
       final twoWeeksAgo = DateTime.now().subtract(const Duration(days: 14));
       
       final analytics = await _db
@@ -185,11 +320,8 @@ class NotificationService {
           .where('type', isEqualTo: timeSlot)
           .get();
 
-      if (analytics.docs.length < 5) {
-        return defaultHour; // Not enough data yet
-      }
+      if (analytics.docs.length < 5) return defaultHour;
 
-      // Calculate most common hour user opens notifications
       final hourCounts = <int, int>{};
       for (final doc in analytics.docs) {
         final timestamp = doc['openedAt'] as Timestamp?;
@@ -201,7 +333,6 @@ class NotificationService {
 
       if (hourCounts.isEmpty) return defaultHour;
 
-      // Find most active hour
       final mostActiveHour = hourCounts.entries
           .reduce((a, b) => a.value > b.value ? a : b)
           .key;
@@ -214,6 +345,100 @@ class NotificationService {
     }
   }
 
+  /// Get contextual message based on day of week
+  String _getContextualMessage(String baseType, int hour) {
+    final now = DateTime.now();
+    final dayOfWeek = now.weekday;
+
+    if (dayOfWeek == DateTime.monday && hour < 12) {
+      return 'Happy Monday! Fresh start, fresh goals 🌟';
+    }
+    if (dayOfWeek == DateTime.wednesday) {
+      return 'Hump day! You\'re halfway through the week 💪';
+    }
+    if (dayOfWeek == DateTime.friday && hour > 17) {
+      return 'TGIF! Finish strong before the weekend 🎉';
+    }
+    if (dayOfWeek == DateTime.saturday || dayOfWeek == DateTime.sunday) {
+      return 'Weekend mode: perfect time for self-care 🌸';
+    }
+
+    switch (baseType) {
+      case 'morning':
+        return 'Ready to conquer your habits today? Let\'s start strong!';
+      case 'noon':
+        return 'How are your habits going? Keep up the momentum!';
+      case 'evening':
+        return 'Almost done! Finish those last habits before dinner.';
+      default:
+        return 'Keep pushing forward! You\'ve got this!';
+    }
+  }
+
+  // ==================== GENERIC SCHEDULER ====================
+  
+  /// 🆕 Generic repeating notification scheduler
+  Future<void> _scheduleRepeatingNotification({
+    required int id,
+    required int hour,
+    required int minute,
+    required String title,
+    required String body,
+    required String channelId,
+    required String channelName,
+    required String payload,
+  }) async {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      playSound: true,
+      enableVibration: true,
+    );
+
+    const iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notifications.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledDate,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: payload,
+    );
+  }
+
+  // ==================== JOURNAL REMINDERS ====================
+  
   /// Schedule daily journal reminder
   Future<void> scheduleJournalReminder(String timing) async {
     await cancelJournalReminders();
@@ -240,191 +465,76 @@ class NotificationService {
         return;
     }
 
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    final androidDetails = AndroidNotificationDetails(
-      'journal_reminder',
-      'Journal Reminders',
-      channelDescription: 'Daily reminders to write in your journal',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      groupKey: 'journal_reminders',
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _notifications.zonedSchedule(
-      notificationId,
-      '📝 Time to reflect',
-      'Take a moment to write in your journal',
-      scheduledDate,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+    await _scheduleRepeatingNotification(
+      id: notificationId,
+      hour: hour,
+      minute: minute,
+      title: '📝 Time to reflect',
+      body: 'Take a moment to write in your journal',
+      channelId: 'journal_reminder',
+      channelName: 'Journal Reminders',
       payload: 'journal_$timing',
     );
 
     debugPrint('✅ Journal reminder scheduled for $hour:$minute');
   }
 
-  /// 🆕 FEATURE 6: Get contextual message based on day
-  String _getContextualMessage(String baseType, int hour) {
-    final now = DateTime.now();
-    final dayOfWeek = now.weekday;
-
-    // Monday motivation
-    if (dayOfWeek == DateTime.monday && hour < 12) {
-      return 'Happy Monday! Fresh start, fresh goals 🌟';
-    }
-    
-    // Wednesday mid-week
-    if (dayOfWeek == DateTime.wednesday) {
-      return 'Hump day! You\'re halfway through the week 💪';
-    }
-    
-    // Friday celebration
-    if (dayOfWeek == DateTime.friday && hour > 17) {
-      return 'TGIF! Finish strong before the weekend 🎉';
-    }
-    
-    // Weekend vibes
-    if (dayOfWeek == DateTime.saturday || dayOfWeek == DateTime.sunday) {
-      return 'Weekend mode: perfect time for self-care 🌸';
-    }
-
-    // Default messages by type
-    switch (baseType) {
-      case 'morning':
-        return 'Ready to conquer your habits today? Let\'s start strong!';
-      case 'noon':
-        return 'How are your habits going? Keep up the momentum!';
-      case 'evening':
-        return 'Almost done! Finish those last habits before dinner.';
-      default:
-        return 'Keep pushing forward! You\'ve got this!';
-    }
-  }
-
+  // ==================== HABIT CHECK-INS ====================
+  
   /// Schedule all 4 habit check-in notifications
   Future<void> scheduleHabitCheckIns() async {
     await cancelHabitCheckIns();
 
-    // 🆕 FEATURE 2: Smart scheduling
     final morningHour = await _getSmartHour('habit_morning', 7);
     final noonHour = await _getSmartHour('habit_noon', 12);
     final eveningHour = await _getSmartHour('habit_evening', 18);
     final nightHour = await _getSmartHour('habit_night', 21);
 
-    // Morning check-in
-    await _scheduleHabitCheckIn(
-      notificationId: habitCheckMorning,
+    await _scheduleRepeatingNotification(
+      id: habitCheckMorning,
       hour: morningHour,
       minute: 0,
       title: '🌅 Good Morning!',
       body: _getContextualMessage('morning', morningHour),
+      channelId: 'habit_checkins',
+      channelName: 'Habit Check-ins',
       payload: 'habit_morning',
     );
 
-    // Noon check-in
-    await _scheduleHabitCheckIn(
-      notificationId: habitCheckNoon,
+    await _scheduleRepeatingNotification(
+      id: habitCheckNoon,
       hour: noonHour,
       minute: 0,
       title: '☀️ Midday Check-in',
       body: _getContextualMessage('noon', noonHour),
+      channelId: 'habit_checkins',
+      channelName: 'Habit Check-ins',
       payload: 'habit_noon',
     );
 
-    // Evening check-in
-    await _scheduleHabitCheckIn(
-      notificationId: habitCheckEvening,
+    await _scheduleRepeatingNotification(
+      id: habitCheckEvening,
       hour: eveningHour,
       minute: 0,
       title: '🌆 Evening Reminder',
       body: _getContextualMessage('evening', eveningHour),
+      channelId: 'habit_checkins',
+      channelName: 'Habit Check-ins',
       payload: 'habit_evening',
     );
 
-    // Night check-in
-    await _scheduleHabitCheckIn(
-      notificationId: habitCheckNight,
+    await _scheduleRepeatingNotification(
+      id: habitCheckNight,
       hour: nightHour,
       minute: 0,
       title: '🌙 Goodnight Check',
       body: 'Time to wind down. Did you complete your habits today?',
+      channelId: 'habit_checkins',
+      channelName: 'Habit Check-ins',
       payload: 'habit_night',
     );
 
-    debugPrint('✅ All 4 habit check-ins scheduled (smart times)');
-  }
-
-  Future<void> _scheduleHabitCheckIn({
-    required int notificationId,
-    required int hour,
-    required int minute,
-    required String title,
-    required String body,
-    required String payload,
-  }) async {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    // 🆕 FEATURE 3: Grouped notifications
-    const androidDetails = AndroidNotificationDetails(
-      'habit_checkins',
-      'Habit Check-ins',
-      channelDescription: 'Regular reminders to check and complete your habits',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      groupKey: 'habit_checkins',
-    );
-
-    const details = NotificationDetails(android: androidDetails);
-
-    await _notifications.zonedSchedule(
-      notificationId,
-      title,
-      body,
-      scheduledDate,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
-      payload: payload,
-    );
+    debugPrint('✅ All 4 habit check-ins scheduled');
   }
 
   /// Send personalized habit completion notification
@@ -474,6 +584,8 @@ class NotificationService {
     );
   }
 
+  // ==================== STREAK PROTECTION ====================
+  
   /// Check and send streak warning if no journal entry today
   Future<void> checkAndSendStreakWarning() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -512,45 +624,18 @@ class NotificationService {
   Future<void> scheduleStreakWarningCheck() async {
     final smartHour = await _getSmartHour('streak_warning', 20);
     
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      smartHour,
-      0,
-    );
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    const androidDetails = AndroidNotificationDetails(
-      'streak_warning',
-      'Streak Warnings',
-      channelDescription: 'Alerts when your journal streak is at risk',
-      importance: Importance.max,
-      priority: Priority.max,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    const details = NotificationDetails(android: androidDetails);
-
-    await _notifications.zonedSchedule(
-      streakWarning,
-      '⚠️ Your Streak is at Risk!',
-      'Don\'t break your streak! Write a quick journal entry before midnight.',
-      scheduledDate,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+    await _scheduleRepeatingNotification(
+      id: streakWarning,
+      hour: smartHour,
+      minute: 0,
+      title: '⚠️ Streak Check',
+      body: 'Checking your journal streak...',
+      channelId: 'streak_protection',
+      channelName: 'Streak Protection',
       payload: 'streak_warning',
     );
 
-    debugPrint('✅ Streak warning scheduled for $smartHour PM daily');
+    debugPrint('✅ Streak warning check scheduled for $smartHour PM daily');
   }
 
   /// Schedule streak milestone notification
@@ -567,16 +652,14 @@ class NotificationService {
     }
   }
 
-  /// 🆕 FEATURE 4: Achievement Badges System
+  // ==================== ACHIEVEMENTS ====================
+  
+  /// Check and send achievement badges
   Future<void> checkAndSendAchievementBadges() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
     try {
-      // Get user stats
-      final userDoc = await _db.collection('users').doc(uid).get();
-      final data = userDoc.data();
-      
       final journalCount = await _db
           .collection('users')
           .doc(uid)
@@ -586,12 +669,10 @@ class NotificationService {
       
       final totalJournals = journalCount.count ?? 0;
       
-      // Check various achievement milestones
       await _checkJournalMilestone(totalJournals);
       await _checkStreakMilestone(uid);
       await _checkHabitMilestone(uid);
       await _checkPerfectWeek(uid);
-      
     } catch (e) {
       debugPrint('Achievement check error: $e');
     }
@@ -638,13 +719,12 @@ class NotificationService {
         channelName: 'Achievements',
       );
       
-      // Save badge to Firestore
       await _saveBadge('journal_$count', badge, message);
     }
   }
 
   Future<void> _checkStreakMilestone(String uid) async {
-    // This is called from home_screen already
+    // Called from home_screen already
   }
 
   Future<void> _checkHabitMilestone(String uid) async {
@@ -682,7 +762,7 @@ class NotificationService {
   Future<void> _checkPerfectWeek(String uid) async {
     try {
       final now = DateTime.now();
-      final weekStart = now.subtract(Duration(days: 7));
+      final weekStart = now.subtract(const Duration(days: 7));
       
       final journalDocs = await _db
           .collection('users')
@@ -691,7 +771,6 @@ class NotificationService {
           .where('timestamp', isGreaterThan: weekStart)
           .get();
       
-      // Check if journaled every day for 7 days
       final uniqueDays = <String>{};
       for (final doc in journalDocs.docs) {
         final timestamp = (doc['timestamp'] as Timestamp).toDate();
@@ -736,7 +815,9 @@ class NotificationService {
     }
   }
 
-  /// 🆕 FEATURE 8: Daily Completion Summary
+  // ==================== DAILY SUMMARY ====================
+  
+  /// Send daily completion summary
   Future<void> sendDailySummary() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -745,7 +826,6 @@ class NotificationService {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
-      // Get today's journal count
       final journalCount = await _db
           .collection('users')
           .doc(uid)
@@ -754,7 +834,6 @@ class NotificationService {
           .count()
           .get();
 
-      // Get today's habit completion
       final habitsSnapshot = await _db
           .collection('users')
           .doc(uid)
@@ -783,12 +862,10 @@ class NotificationService {
         }
       }
 
-      // Get current streak
       final streakDoc = await _db.collection('users').doc(uid).get();
       final streakData = streakDoc.data()?['journalStreak'] as Map?;
       final currentStreak = streakData?['currentStreak'] ?? 0;
 
-      // Build summary message
       final journalEmoji = journalCount.count! > 0 ? '✓' : '✗';
       final habitPercent = totalHabits > 0 
           ? ((completedHabits / totalHabits) * 100).toStringAsFixed(0)
@@ -820,48 +897,22 @@ class NotificationService {
 
   /// Schedule daily summary (10:30 PM)
   Future<void> scheduleDailySummary() async {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      22, // 10 PM
-      30,
-    );
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    const androidDetails = AndroidNotificationDetails(
-      'summary',
-      'Daily Summaries',
-      channelDescription: 'End of day progress summaries',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      groupKey: 'achievements',
-    );
-
-    const details = NotificationDetails(android: androidDetails);
-
-    await _notifications.zonedSchedule(
-      dailySummary,
-      '📊 Today\'s Summary',
-      'See how you did today',
-      scheduledDate,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+    await _scheduleRepeatingNotification(
+      id: dailySummary,
+      hour: 22,
+      minute: 30,
+      title: '📊 Today\'s Summary',
+      body: 'See how you did today',
+      channelId: 'summary',
+      channelName: 'Daily Summaries',
       payload: 'daily_summary',
     );
 
     debugPrint('✅ Daily summary scheduled for 10:30 PM');
   }
 
+  // ==================== ENGAGEMENT NOTIFICATIONS ====================
+  
   /// Schedule weekly review (Sunday 7 PM)
   Future<void> scheduleWeeklyReview() async {
     final now = tz.TZDateTime.now(tz.local);
@@ -880,16 +931,17 @@ class NotificationService {
     }
 
     const androidDetails = AndroidNotificationDetails(
-      'weekly_review',
+      'engagement',
       'Weekly Reviews',
-      channelDescription: 'Weekly progress summaries',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      groupKey: 'engagement',
+      playSound: true,
+      enableVibration: true,
     );
 
-    const details = NotificationDetails(android: androidDetails);
+    const iosDetails = DarwinNotificationDetails();
+    const details = NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _notifications.zonedSchedule(
       weeklyReview,
@@ -907,7 +959,7 @@ class NotificationService {
     debugPrint('✅ Weekly review scheduled for Sundays at 7 PM');
   }
 
-  /// Schedule motivational quote
+  /// Schedule motivational quote (random time between 10 AM - 5 PM)
   Future<void> scheduleMotivationalQuote() async {
     final quotes = [
       'The only way to do great work is to love what you do. - Steve Jobs',
@@ -922,55 +974,25 @@ class NotificationService {
       'Wake up with determination. Go to bed with satisfaction.',
     ];
 
-    final now = tz.TZDateTime.now(tz.local);
     final random = Random();
-    
     final randomHour = 10 + random.nextInt(7);
-    
-    var scheduledDate = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
-      randomHour,
-      0,
-    );
-
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    const androidDetails = AndroidNotificationDetails(
-      'motivation',
-      'Motivational Quotes',
-      channelDescription: 'Daily inspiration to keep you motivated',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
-      icon: '@mipmap/ic_launcher',
-      groupKey: 'engagement',
-    );
-
-    const details = NotificationDetails(android: androidDetails);
-
     final selectedQuote = quotes[random.nextInt(quotes.length)];
 
-    await _notifications.zonedSchedule(
-      motivationalQuote,
-      '💭 Daily Inspiration',
-      selectedQuote,
-      scheduledDate,
-      details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time,
+    await _scheduleRepeatingNotification(
+      id: motivationalQuote,
+      hour: randomHour,
+      minute: 0,
+      title: '💭 Daily Inspiration',
+      body: selectedQuote,
+      channelId: 'engagement',
+      channelName: 'Motivational Quotes',
       payload: 'motivational_quote',
     );
 
     debugPrint('✅ Motivational quote scheduled');
   }
 
-  /// Schedule mid-week check-in
+  /// Schedule mid-week check-in (Wednesday 12 PM)
   Future<void> scheduleMidWeekCheckIn() async {
     final now = tz.TZDateTime.now(tz.local);
     
@@ -988,13 +1010,11 @@ class NotificationService {
     }
 
     const androidDetails = AndroidNotificationDetails(
-      'midweek_checkin',
+      'engagement',
       'Mid-week Check-ins',
-      channelDescription: 'Wednesday wellness check-ins',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      groupKey: 'engagement',
     );
 
     const details = NotificationDetails(android: androidDetails);
@@ -1015,7 +1035,7 @@ class NotificationService {
     debugPrint('✅ Mid-week check-in scheduled for Wednesdays at 12 PM');
   }
 
-  /// Schedule weekend reflection
+  /// Schedule weekend reflection (Saturday 10 AM)
   Future<void> scheduleWeekendReflection() async {
     final now = tz.TZDateTime.now(tz.local);
     
@@ -1033,13 +1053,11 @@ class NotificationService {
     }
 
     const androidDetails = AndroidNotificationDetails(
-      'weekend_reflection',
+      'engagement',
       'Weekend Reflections',
-      channelDescription: 'Saturday morning reflections',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      groupKey: 'engagement',
     );
 
     const details = NotificationDetails(android: androidDetails);
@@ -1060,7 +1078,9 @@ class NotificationService {
     debugPrint('✅ Weekend reflection scheduled for Saturdays at 10 AM');
   }
 
-  /// Schedule all app notifications
+  // ==================== SCHEDULE ALL ====================
+  
+  /// Schedule all app notifications at once
   Future<void> scheduleAllNotifications(String journalTiming) async {
     debugPrint('📅 Scheduling all notifications with smart features...');
     
@@ -1071,12 +1091,13 @@ class NotificationService {
     await scheduleMotivationalQuote();
     await scheduleMidWeekCheckIn();
     await scheduleWeekendReflection();
-    await scheduleDailySummary(); // 🆕
+    await scheduleDailySummary();
     
     debugPrint('✅ All notifications scheduled with smart scheduling!');
   }
 
-  // Cancellation methods
+  // ==================== CANCELLATION ====================
+  
   Future<void> cancelJournalReminders() async {
     await _notifications.cancel(journalReminderMorning);
     await _notifications.cancel(journalReminderEvening);
@@ -1095,6 +1116,8 @@ class NotificationService {
     debugPrint('✅ All notifications cancelled');
   }
 
+  // ==================== UTILITIES ====================
+  
   Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     return await _notifications.pendingNotificationRequests();
   }

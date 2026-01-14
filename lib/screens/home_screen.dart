@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mindur/models/user_profile.dart';
 import 'package:mindur/theme/app_background.dart';
 import 'package:mindur/utils/journal_streak_util.dart';
@@ -16,6 +18,7 @@ import 'package:intl/intl.dart';
 
 import '../components/homescreen_cards.dart';
 import '../constant/datetime.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../services/notification_helper.dart';
 import '../services/notification_service.dart';
@@ -118,9 +121,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final currentStreak = streakData['currentStreak'] ?? 0;
 
-      // ✅ Trigger streak milestone notification
-      await NotificationService().scheduleStreakMilestone(currentStreak);
-
       setState(() {
         userProfile = profile;
         journalEntries = journalSnapshot.docs.map((doc) => doc.data()).toList();
@@ -130,8 +130,41 @@ class _HomeScreenState extends State<HomeScreen> {
         longestStreak = streakData['longestStreak'] ?? 0;
         isLoading = false;
       });
+
+      // ✅ LOG STREAK MILESTONE (only on significant milestones)
+      if (currentStreak > 0 &&
+          (currentStreak == 7 ||
+              currentStreak == 14 ||
+              currentStreak == 30 ||
+              currentStreak == 60 ||
+              currentStreak == 100)) {
+        await AnalyticsService().logJournalStreakMilestone(
+          streakDays: currentStreak,
+        );
+      }
+
+      // ✅ UPDATE USER PROPERTIES
+      await AnalyticsService().setUserProperties(
+        journalStreak: currentStreak,
+        habitStreak: completedCount,
+      );
+
+      // ✅ LOG DAILY HABITS SUMMARY (if user has habits)
+      if (totalCount > 0) {
+        await AnalyticsService().logDailyHabitsSummary(
+          completed: completedCount,
+          total: totalCount,
+        );
+      }
     } catch (e) {
       debugPrint('Error fetching user data: $e');
+
+      // ✅ LOG ERROR
+      await AnalyticsService().logError(
+        error: e.toString(),
+        reason: 'Failed to fetch user data on home screen',
+      );
+
       if (!mounted) return;
       setState(() => isLoading = false);
     }
@@ -172,10 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               CircularElevatedButton(
                 onpressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AccountScreen()),
-                  );
+                  context.pushNamed('account');
                 },
                 iconData: LucideIcons.user,
               ),
@@ -186,7 +216,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               CircularElevatedButton(
-                onpressed: () {},
+                onpressed: () {
+                  context.pushNamed('personalization');
+                },
                 iconData: LucideIcons.bell,
               ),
             ],
@@ -235,15 +267,20 @@ class _HomeScreenState extends State<HomeScreen> {
                               ],
                             ),
                           ),
-                          TransparentCard(
-                            height: MediaQuery.of(context).size.height * 0.19,
-                            width: MediaQuery.of(context).size.width * 0.4,
-                            child: SvgPicture.asset(
-                              "assets/images/svg/$petPath",
-                              fit: BoxFit.cover,
-                              placeholderBuilder: (_) => const Icon(Icons.pets),
-                            ),
-                          ),
+                          kIsWeb
+                              ? const SizedBox.shrink()
+                              : TransparentCard(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.19,
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.4,
+                                  child: SvgPicture.asset(
+                                    "assets/images/svg/$petPath",
+                                    fit: BoxFit.cover,
+                                    placeholderBuilder: (_) =>
+                                        const Icon(Icons.pets),
+                                  ),
+                                ),
                         ],
                       ),
                       const SizedBox(height: 20),

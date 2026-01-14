@@ -1,16 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mindur/components/carousel_widget/cw_calories.dart';
 import 'package:mindur/theme/app_background.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../components/carousel_widget/cw_protein.dart';
 import '../components/recent_entry_card.dart';
 import '../models/user_profile.dart';
+import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../utils/nutrition_calculator.dart';
 import 'food_search_screen.dart';
-
 
 class FoodOverviewScreen extends StatefulWidget {
   const FoodOverviewScreen({super.key});
@@ -74,6 +75,19 @@ class _FoodOverviewScreenState extends State<FoodOverviewScreen> {
       totalProtein = summary['protein'];
       isLoading = false;
     });
+
+    // ✅ LOG GOAL ACHIEVEMENTS
+    if (totalCalories >= usercalgoal) {
+      await AnalyticsService().logCalorieGoalReached(
+        totalCalories: totalCalories.toInt(),
+      );
+    }
+
+    if (totalProtein >= userproteingoal) {
+      await AnalyticsService().logProteinGoalReached(
+        totalProtein: totalProtein.toInt(),
+      );
+    }
   }
 
   @override
@@ -135,7 +149,9 @@ class _FoodOverviewScreenState extends State<FoodOverviewScreen> {
                               count: 2,
                               effect: JumpingDotEffect(
                                 verticalOffset: 10,
-                                dotColor: colors.outlineVariant.withOpacity(0.6),
+                                dotColor: colors.outlineVariant.withOpacity(
+                                  0.6,
+                                ),
                                 activeDotColor: colors.primary,
                                 jumpScale: 1.5,
                               ),
@@ -146,12 +162,9 @@ class _FoodOverviewScreenState extends State<FoodOverviewScreen> {
                               width: 250,
                               child: ElevatedButton(
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const FoodSearchSceen(),
-                                    ),
-                                  ).then((_) => loadSummary());
+                                  context
+                                      .push('/food/search')
+                                      .then((_) => loadSummary());
                                 },
                                 child: const Text('Log Food'),
                               ),
@@ -159,18 +172,18 @@ class _FoodOverviewScreenState extends State<FoodOverviewScreen> {
                           ],
                         ),
                       ),
-      
+
                       const SizedBox(height: 12),
-      
+
                       Text(
                         "Today's Food Logs",
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-      
+
                       const SizedBox(height: 8),
-      
+
                       /// 🔹 Food Logs List
                       Expanded(
                         child: FutureBuilder<QuerySnapshot>(
@@ -182,7 +195,7 @@ class _FoodOverviewScreenState extends State<FoodOverviewScreen> {
                                 child: CircularProgressIndicator(),
                               );
                             }
-      
+
                             if (snapshot.hasError) {
                               return Center(
                                 child: Text(
@@ -191,16 +204,16 @@ class _FoodOverviewScreenState extends State<FoodOverviewScreen> {
                                 ),
                               );
                             }
-      
+
                             final docs = snapshot.data!.docs;
-      
+
                             if (docs.isEmpty) {
                               return Text(
                                 "No food logged today.",
                                 style: theme.textTheme.bodyMedium,
                               );
                             }
-      
+
                             return ListView.builder(
                               padding: const EdgeInsets.only(bottom: 80),
                               itemCount: docs.length,
