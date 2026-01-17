@@ -9,7 +9,6 @@ import '../components/personalized_radio_input.dart';
 import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../services/notification_service.dart';
-import 'main_screen.dart';
 
 class PersonalizationScreen extends StatefulWidget {
   const PersonalizationScreen({super.key});
@@ -23,6 +22,7 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
   String fitnessgoal = '';
   String appgoal = '';
   String journalreminder = '';
+  bool _isLoading = false;
 
   late final WeightSliderController _weightController;
   late final WeightSliderController _weightGoalController;
@@ -31,8 +31,6 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
   double weight = 40.0;
   double weightGoal = 70.0;
   double height = 120.0;
-
-  bool _isSaving = false;
 
   @override
   void initState() {
@@ -271,173 +269,101 @@ class _PersonalizationScreenState extends State<PersonalizationScreen> {
 
                 const SizedBox(height: 24),
 
-                SizedBox(
-                  width: MediaQuery.sizeOf(context).width * 0.5,
-                  height: MediaQuery.sizeOf(context).width * 0.08,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (petSelection.isEmpty ||
-                          fitnessgoal.isEmpty ||
-                          appgoal.isEmpty ||
-                          journalreminder.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please answer all questions!'),
-                          ),
-                        );
-                        return;
-                      }
+                Center(
+                  child: SizedBox(
+                    width: MediaQuery.sizeOf(context).width * 0.5,
+                    height: MediaQuery.sizeOf(context).width * 0.12,
+                    child: ElevatedButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              if (petSelection.isEmpty ||
+                                  fitnessgoal.isEmpty ||
+                                  appgoal.isEmpty ||
+                                  journalreminder.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Please answer all questions!',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
 
-                      // ✅ REQUEST NOTIFICATION PERMISSION
-                      final notificationService = NotificationService();
-                      final permissionGranted = await notificationService
-                          .requestPermissions();
+                              setState(() => _isLoading = true);
 
-                      if (permissionGranted) {
-                        // 🆕 SCHEDULE ALL NOTIFICATIONS AT ONCE
-                        await notificationService.scheduleAllNotifications(
-                          journalreminder,
-                        );
+                              try {
+                                final notificationService =
+                                    NotificationService();
+                                final permissionGranted =
+                                    await notificationService
+                                        .requestPermissions();
 
-                        debugPrint(
-                          '✅ All notifications scheduled successfully!',
-                        );
-                      } else {
-                        // Show warning but continue
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                '⚠️ Notifications disabled. You can enable them later in settings.',
+                                if (permissionGranted) {
+                                  await notificationService
+                                      .scheduleAllNotifications(
+                                        journalreminder,
+                                      );
+                                } else if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '⚠️ Notifications disabled. You can enable them later in settings.',
+                                      ),
+                                      duration: Duration(seconds: 3),
+                                    ),
+                                  );
+                                }
+
+                                await AnalyticsService()
+                                    .logPersonalizationCompleted(
+                                      fitnessGoal: fitnessgoal,
+                                      appGoal: appgoal,
+                                      notificationTime: journalreminder,
+                                    );
+
+                                await AnalyticsService().setUserProperties(
+                                  fitnessGoal: fitnessgoal,
+                                  appGoal: appgoal,
+                                  notificationPreference: journalreminder,
+                                );
+
+                                await FirestoreService()
+                                    .saveUserPersonalization(
+                                      petSelection: petSelection,
+                                      fitnessGoal: fitnessgoal,
+                                      appGoal: appgoal,
+                                      journalReminder: journalreminder,
+                                      height: height,
+                                      currentWeight: weight,
+                                      goalWeight: weightGoal,
+                                    );
+
+                                if (mounted) context.go('/');
+                              } finally {
+                                if (mounted) setState(() => _isLoading = false);
+                              }
+                            },
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
                               ),
-                              duration: Duration(seconds: 3),
-                            ),
-                          );
-                        }
-                      }
-
-                      // ✅ LOG PERSONALIZATION COMPLETION
-                      await AnalyticsService().logPersonalizationCompleted(
-                        fitnessGoal: fitnessgoal,
-                        appGoal: appgoal,
-                        notificationTime: journalreminder,
-                      );
-
-                      // ✅ SET USER PROPERTIES
-                      await AnalyticsService().setUserProperties(
-                        fitnessGoal: fitnessgoal,
-                        appGoal: appgoal,
-                        notificationPreference: journalreminder,
-                      );
-
-                      // Save personalization data
-                      await FirestoreService().saveUserPersonalization(
-                        petSelection: petSelection,
-                        fitnessGoal: fitnessgoal,
-                        appGoal: appgoal,
-                        journalReminder: journalreminder,
-                        height: height,
-                        currentWeight: weight,
-                        goalWeight: weightGoal,
-                      );
-
-                      if (mounted) {
-                        context.go('/');
-                      }
-                    },
-                    child: Center(child: const Text('Next')),
+                            )
+                          : const Text('Next'),
+                    ),
                   ),
                 ),
+                SizedBox(height: 15),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _handleNext() async {
-    // Validate inputs
-    if (petSelection.isEmpty ||
-        fitnessgoal.isEmpty ||
-        appgoal.isEmpty ||
-        journalreminder.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Please answer all questions!')),
-      );
-      return;
-    }
-
-    setState(() => _isSaving = true);
-
-    try {
-      // ✅ STEP 1: Request notification permissions
-      final notificationService = NotificationService();
-      final permissionGranted = await notificationService.requestPermissions();
-
-      if (!permissionGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                '⚠️ Notifications disabled. You can enable them later in settings.',
-              ),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      }
-
-      // ✅ STEP 2: Schedule all notifications at once
-      if (permissionGranted) {
-        await notificationService.scheduleAllNotifications(journalreminder);
-        debugPrint('✅ All notifications scheduled successfully!');
-      }
-
-      // ✅ STEP 3: Save personalization data to Firestore
-      await FirestoreService().saveUserPersonalization(
-        petSelection: petSelection,
-        fitnessGoal: fitnessgoal,
-        appGoal: appgoal,
-        journalReminder: journalreminder,
-        height: height,
-        currentWeight: weight,
-        goalWeight: weightGoal,
-      );
-
-      debugPrint('✅ User personalization saved');
-
-      if (mounted) {
-        // ✅ STEP 4: Navigate to main screen
-        context.goNamed('home');
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              permissionGranted
-                  ? '✅ Setup complete! Notifications enabled.'
-                  : '✅ Setup complete!',
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('❌ Error during personalization: $e');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ Error: ${e.toString()}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
-    }
   }
 }

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Mindur</title>
+    <meta name="description" content="Get in touch with the Mindur team. Support, feedback, and inquiries.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="header-placeholder"></div>
+
+    <main>
+        <section class="page-container">
+            <div class="section-header fade-up">
+                <div class="badge">Get in Touch</div>
+                <h1 class="page-title">We'd love to hear from you.</h1>
+                <p class="text-lead">Have a question about the app? Found a bug? Or just want to say hi?</p>
+            </div>
+
+            <div class="grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="content-box glass fade-on-scroll">
+                    <form>
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" placeholder="Your name">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" placeholder="john@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Message</label>
+                            <textarea rows="5" placeholder="How can we help?"></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary">Send Message</button>
+                    </form>
+                </div>
+
+                <div class="content-box glass fade-on-scroll delay-1" style="height: fit-content;">
+                    <h3 style="margin-bottom: 24px;">Other ways to connect</h3>
+
+                    <div style="margin-bottom: 32px;">
+                        <div class="icon-box" style="margin-bottom: 16px;"><i data-lucide="mail"></i></div>
+                        <h4>Email Us</h4>
+                        <p style="color: var(--text-muted);">support@mindur.app</p>
+                    </div>
+
+                    <div style="margin-bottom: 32px;">
+                        <div class="icon-box" style="margin-bottom: 16px;"><i data-lucide="twitter"></i></div>
+                        <h4>Social Media</h4>
+                        <p style="color: var(--text-muted);">Follow us for updates and tips.</p>
+                        <div style="display: flex; gap: 16px; margin-top: 16px;">
+                            <a href="#" style="color: white;"><i data-lucide="twitter"></i></a>
+                            <a href="#" style="color: white;"><i data-lucide="instagram"></i></a>
+                            <a href="#" style="color: white;"><i data-lucide="linkedin"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="js/main.js"></script>
+</body>
+
+</html>

@@ -9,8 +9,6 @@ import 'package:mindur/theme/app_background.dart';
 import '../components/input_textfield.dart';
 import '../services/analytics_service.dart';
 import '../services/signup_service.dart';
-import '../screens/login_screen.dart';
-import 'personalization_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});

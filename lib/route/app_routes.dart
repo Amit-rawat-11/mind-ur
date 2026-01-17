@@ -3,7 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../screens/notification_screen.dart';
+import '../screens/onboarding_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/signup_screen.dart';
 import '../screens/personalization_screen.dart';
@@ -14,7 +17,15 @@ import '../screens/food_search_screen.dart';
 import '../screens/AddFoodEntryScreen.dart';
 import '../services/analytics_service.dart';
 
+/// ✅ Debug-only logger
+void logDebug(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
+
 class AppRoutes {
+  static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String signup = '/signup';
   static const String personalization = '/personalization';
@@ -24,32 +35,49 @@ class AppRoutes {
   static const String journalNew = '/journal/new';
   static const String foodSearch = '/food/search';
   static const String foodAdd = '/food/add';
+  static const String notifications = '/notifications';
 
-  /// 🔐 Check if user is authenticated
   static bool _isAuthenticated() {
     return FirebaseAuth.instance.currentUser != null;
   }
 
-  /// 🎯 GoRouter configuration
+  static Future<bool> _isOnboardingCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('onboarding_completed') ?? false;
+  }
+
   static final GoRouter router = GoRouter(
-    debugLogDiagnostics: true,
-    initialLocation: login,
-    
-    // 🔄 Refresh router when auth state changes
+    debugLogDiagnostics: kDebugMode, // ✅ IMPORTANT
+    initialLocation: onboarding,
     refreshListenable: _AuthStateNotifier(),
-    
+
     redirect: (context, state) async {
       final isAuthenticated = _isAuthenticated();
-      final isOnAuthPage = state.matchedLocation == login || 
-                          state.matchedLocation == signup;
+      final isOnboardingCompleted = await _isOnboardingCompleted();
+
+      final isOnOnboardingPage = state.matchedLocation == onboarding;
+      final isOnAuthPage =
+          state.matchedLocation == login || state.matchedLocation == signup;
       final isOnPersonalization = state.matchedLocation == personalization;
 
-      // ✅ LOG SCREEN VIEW
       AnalyticsService().logScreenView(state.matchedLocation);
 
-      // ✅ User is authenticated
+      if (!isOnboardingCompleted && !isOnOnboardingPage) {
+        logDebug('🔄 Redirecting to onboarding (not completed)');
+        return onboarding;
+      }
+
+      if (isOnboardingCompleted && isOnOnboardingPage) {
+        if (isAuthenticated) {
+          logDebug('🔄 Onboarding done → home');
+          return home;
+        } else {
+          logDebug('🔄 Onboarding done → login');
+          return login;
+        }
+      }
+
       if (isAuthenticated) {
-        // Check if user completed personalization
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
           try {
@@ -57,54 +85,54 @@ class AppRoutes {
                 .collection('users')
                 .doc(user.uid)
                 .get();
-            
-            final personalizedCompleted = userDoc.data()?['personalizedCompleted'] ?? false;
-            
-            // User hasn't completed personalization yet
+
+            final personalizedCompleted =
+                userDoc.data()?['personalizedCompleted'] ?? false;
+
             if (!personalizedCompleted) {
-              // If they're trying to access anything OTHER than personalization
               if (!isOnPersonalization) {
-                debugPrint('🔄 Redirecting to personalization (not completed)');
+                logDebug('🔄 Redirecting to personalization');
                 return personalization;
               }
-              // They're on personalization screen, allow it
               return null;
             }
-            
-            // User HAS completed personalization
+
             if (personalizedCompleted) {
-              // If they're on auth pages or personalization, redirect to home
               if (isOnAuthPage || isOnPersonalization) {
-                debugPrint('🔄 Redirecting to home (already personalized)');
+                logDebug('🔄 Already personalized → home');
                 return home;
               }
-              // Allow access to all other screens
               return null;
             }
           } catch (e) {
-            debugPrint('⚠️ Error checking personalization status: $e');
-            // On error, allow navigation
+            logDebug('⚠️ Personalization check error: $e');
             return null;
           }
         }
-        
-        // Default: redirect auth pages to home, allow everything else
-        if (isOnAuthPage) {
-          return home;
-        }
+
+        if (isOnAuthPage) return home;
         return null;
       }
 
-      // ❌ User is NOT authenticated
-      if (!isOnAuthPage && !isOnPersonalization) {
-        debugPrint('🔄 Redirecting to login (not authenticated)');
-        return login; // Redirect to login
+      if (!isOnAuthPage && !isOnPersonalization && !isOnOnboardingPage) {
+        logDebug('🔄 Not authenticated → login');
+        return login;
       }
 
-      return null; // Allow access to login/signup
+      return null;
     },
-
     routes: [
+      // ✅ NEW: ONBOARDING ROUTE
+      GoRoute(
+        path: onboarding,
+        name: 'onboarding',
+        pageBuilder: (context, state) => _buildPageWithDefaultTransition(
+          context: context,
+          state: state,
+          child: const OnboardingScreen(),
+        ),
+      ),
+
       // 🔐 AUTH ROUTES
       GoRoute(
         path: login,
@@ -202,6 +230,17 @@ class AppRoutes {
           child: const FoodLoggingScreen(),
         ),
       ),
+      GoRoute(
+        path: notifications,
+        name: 'notifications',
+        pageBuilder: (context, state) {
+          return _buildPageWithDefaultTransition(
+            context: context,
+            state: state,
+            child: const NotificationScreen(),
+          );
+        },
+      ),
     ],
 
     // 🚫 ERROR PAGE
@@ -242,13 +281,14 @@ class AppRoutes {
       key: state.pageKey,
       child: child,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        const begin = Offset(1.0, 0.0); // Slide from right
+        const begin = Offset(1.0, 0.0);
         const end = Offset.zero;
         const curve = Curves.easeInOut;
 
-        var tween = Tween(begin: begin, end: end).chain(
-          CurveTween(curve: curve),
-        );
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
 
         var offsetAnimation = animation.drive(tween);
         var fadeAnimation = animation.drive(
@@ -257,10 +297,7 @@ class AppRoutes {
 
         return SlideTransition(
           position: offsetAnimation,
-          child: FadeTransition(
-            opacity: fadeAnimation,
-            child: child,
-          ),
+          child: FadeTransition(opacity: fadeAnimation, child: child),
         );
       },
     );

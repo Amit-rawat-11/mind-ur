@@ -11,7 +11,6 @@ import '../models/user_profile.dart';
 import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../utils/nutrition_calculator.dart';
-import 'food_search_screen.dart';
 
 class FoodOverviewScreen extends StatefulWidget {
   const FoodOverviewScreen({super.key});

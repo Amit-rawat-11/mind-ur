@@ -15,18 +15,24 @@ class BootReceiverHandler {
   /// Call this from main.dart after Firebase initialization
   Future<void> rescheduleNotificationsAfterBoot() async {
     try {
-      debugPrint('🔄 Checking if notifications need rescheduling...');
+      if (kDebugMode) {
+        debugPrint('🔔 Rescheduling notifications after boot/startup...');
+      }
 
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) {
-        debugPrint('⚠️ No user logged in, skipping notification rescheduling');
+        if (kDebugMode) {
+          debugPrint('⚠️ No authenticated user - skipping reschedule');
+        }
         return;
       }
 
       // Get user preferences
       final userDoc = await _db.collection('users').doc(uid).get();
       if (!userDoc.exists) {
-        debugPrint('⚠️ User document not found');
+        if (kDebugMode) {
+          debugPrint('⚠️ User document does not exist - skipping reschedule');
+        }
         return;
       }
 
@@ -36,14 +42,22 @@ class BootReceiverHandler {
       // Check if notifications are enabled
       final notificationsEnabled = data['notificationsEnabled'] ?? true;
       if (!notificationsEnabled) {
-        debugPrint('🔕 Notifications disabled by user');
+        if (kDebugMode) {
+          debugPrint(
+            '⚠️ Notifications disabled in preferences - skipping reschedule',
+          );
+        }
         return;
       }
 
       // Get journal reminder timing
       final journalReminder = data['journalReminder'] ?? 'Evening';
 
-      debugPrint('🔄 Rescheduling all notifications...');
+      if (kDebugMode) {
+        debugPrint(
+          '🔔 Notifications enabled. Journal reminder time: $journalReminder',
+        );
+      }
 
       // Initialize notification service (creates channels)
       await _notificationService.initialize();
@@ -51,12 +65,16 @@ class BootReceiverHandler {
       // Reschedule all notifications
       await _notificationService.scheduleAllNotifications(journalReminder);
 
-      debugPrint('✅ All notifications rescheduled successfully after boot');
+      if (kDebugMode) {
+        debugPrint('✅ Notifications rescheduled successfully');
+      }
 
       // Log reschedule event for analytics
       await _logRescheduleEvent();
     } catch (e) {
-      debugPrint('❌ Error rescheduling notifications: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error rescheduling notifications: $e');
+      }
     }
   }
 
@@ -71,12 +89,14 @@ class BootReceiverHandler {
           .doc(uid)
           .collection('notification_analytics')
           .add({
-        'event': 'notifications_rescheduled_after_boot',
-        'timestamp': FieldValue.serverTimestamp(),
-        'device': 'android',
-      });
+            'event': 'notifications_rescheduled_after_boot',
+            'timestamp': FieldValue.serverTimestamp(),
+            'device': 'android',
+          });
     } catch (e) {
-      debugPrint('Failed to log reschedule event: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error logging reschedule event: $e');
+      }
     }
   }
 
@@ -84,17 +104,25 @@ class BootReceiverHandler {
   Future<bool> needsRescheduling() async {
     try {
       final pending = await _notificationService.getPendingNotifications();
-      
+
       // If no pending notifications, we need to reschedule
       if (pending.isEmpty) {
-        debugPrint('⚠️ No pending notifications found - needs rescheduling');
+        if (kDebugMode) {
+          debugPrint('⚠️ No pending notifications found');
+        }
         return true;
       }
 
-      debugPrint('✅ Found ${pending.length} pending notifications');
+      if (kDebugMode) {
+        debugPrint(
+          '✅ Found ${pending.length} pending notifications - no reschedule needed',
+        );
+      }
       return false;
     } catch (e) {
-      debugPrint('Error checking pending notifications: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error checking pending notifications: $e');
+      }
       return true; // Assume needs rescheduling on error
     }
   }

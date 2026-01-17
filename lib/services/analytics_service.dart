@@ -1,6 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 /// 📊 Centralized Analytics Service
@@ -76,7 +75,9 @@ class AnalyticsService {
   /// Log app open (tracks DAU automatically)
   Future<void> logAppOpen() async {
     await _analytics.logAppOpen();
-    debugPrint('📊 Analytics: App opened');
+    if (kDebugMode) {
+      debugPrint('📊 Analytics: App opened');
+    }
   }
 
   
@@ -88,7 +89,9 @@ class AnalyticsService {
   /// Log screen view manually (GoRouter does this automatically)
   Future<void> logScreenView(String screenName) async {
     await _analytics.logScreenView(screenName: screenName);
-    debugPrint('📊 Analytics: Screen viewed - $screenName');
+   if (kDebugMode) {
+      debugPrint('📊 Analytics: Screen viewed - $screenName');
+    }
   }
 
   // ═══════════════════════════════════════════════════════════

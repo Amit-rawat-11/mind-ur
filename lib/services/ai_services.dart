@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 
 import 'api_config_service.dart';
@@ -15,7 +14,7 @@ class MindurAiService {
   static const String _fallbackModel = 'mistralai/mistral-7b-instruct';  
 
   static const String _plainTextSystemPrompt = '''
-You are an AI assistant inside the Mind-ur app.
+You are an AI assistant inside the Mindur app.
 You are not a real person.
 
 Do not invent names.
@@ -50,7 +49,9 @@ Be supportive, concise, and calm.
     ];
 
     return await _callModel(_primaryModel, messages).catchError((_) async {
-      debugPrint('⚠️ Primary model failed. Using fallback.');
+      if (kDebugMode) {
+        debugPrint('⚠️ Primary model failed, switching to fallback model');
+      }
       return await _callModel(_fallbackModel, messages);
     });
   }
@@ -65,7 +66,7 @@ Be supportive, concise, and calm.
         'Authorization': 'Bearer $_apiKey',
         'Content-Type': 'application/json',
         'HTTP-Referer': 'https://mindur.app',
-        'X-Title': 'Mind-ur',
+        'X-Title': 'Mindur',
       },
       body: jsonEncode({
         'model': model,
@@ -75,7 +76,10 @@ Be supportive, concise, and calm.
       }),
     );
 
-    debugPrint('🤖 $model → HTTP ${res.statusCode}');
+    if (kDebugMode) {
+      debugPrint(
+          '🧠 OpenRouter API called with model: $model, status: ${res.statusCode}');
+    }
 
     if (res.statusCode != 200) {
       throw Exception('OpenRouter error ${res.statusCode}');

@@ -7,8 +7,6 @@ import 'package:mindur/theme/app_background.dart';
 import '../components/input_textfield.dart';
 import '../services/analytics_service.dart';
 import '../services/signup_service.dart';
-import '../screens/signup_screen.dart';
-import '../screens/main_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -61,7 +61,9 @@ class FirestoreService {
         },
       }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint("Error saving journal entry or updating streak: $e");
+      if (kDebugMode) {
+        debugPrint("Error saving journal entry: $e");
+      }
     }
   }
 
@@ -81,7 +83,9 @@ class FirestoreService {
             'timestamp': entry.timestamp,
           });
     } catch (e) {
-      debugPrint("Error updating journal entry: $e");
+      if (kDebugMode) {
+        debugPrint("Error updating journal entry: $e");
+      }
     }
   }
 
@@ -106,7 +110,9 @@ class FirestoreService {
         timestamp: (data['timestamp'] as Timestamp).toDate(),
       );
     } catch (e) {
-      debugPrint("Error fetching journal entry: $e");
+      if (kDebugMode) {
+        debugPrint("Error fetching journal entry: $e");
+      }
       return null;
     }
   }
@@ -133,7 +139,9 @@ class FirestoreService {
             : null,
       });
     } catch (e) {
-      debugPrint("Error saving habits: $e");
+      if (kDebugMode) {
+        debugPrint("Error adding habit: $e");
+      }
     }
   }
 
@@ -181,7 +189,9 @@ class FirestoreService {
         );
       }).toList();
     } catch (e) {
-      debugPrint('Error fetching habits: $e');
+      if (kDebugMode) {
+        debugPrint("Error fetching habits: $e");
+      }
       return [];
     }
   }
@@ -212,7 +222,9 @@ class FirestoreService {
                 : null,
           });
     } catch (e) {
-      debugPrint("Error updating habit: $e");
+      if (kDebugMode) {
+        debugPrint("Error updating habit: $e");
+      }
     }
   }
 
@@ -243,7 +255,9 @@ class FirestoreService {
         'timestamp': Timestamp.now(),
       });
     } catch (e) {
-      debugPrint("Error logging food: $e");
+      if (kDebugMode) {
+        debugPrint("Error logging food: $e");
+      }
     }
   }
 
@@ -275,7 +289,9 @@ class FirestoreService {
       }
       return {'calories': totalCalories, 'protein': totalProtein};
     } catch (e) {
-      debugPrint("Error fetching food summary: $e");
+      if (kDebugMode) {
+        debugPrint("Error fetching today's food summary: $e");
+      }
       return {'calories': 0, 'protein': 0};
     }
   }
@@ -301,7 +317,9 @@ class FirestoreService {
         }
       }
     } catch (e) {
-      debugPrint("Error cleaning old food logs: $e");
+      if (kDebugMode) {
+        debugPrint("Error cleaning old food logs: $e");
+      }
     }
   }
 
@@ -342,7 +360,9 @@ class FirestoreService {
       await batch.commit();
       await sessionRef.delete();
     } catch (e) {
-      debugPrint("Delete session error: $e");
+      if (kDebugMode) {
+        debugPrint("Delete session error: $e");
+      }
     }
   }
 
@@ -372,7 +392,9 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true)); // do NOT overwrite signup data
     } catch (e) {
-      debugPrint("Error saving personalization: $e");
+      if (kDebugMode) {
+        debugPrint("Error saving personalization: $e");
+      }
     }
   }
 
@@ -401,7 +423,9 @@ class FirestoreService {
 
       return [];
     } catch (e) {
-      debugPrint("Error fetching AI memory: $e");
+      if (kDebugMode) {
+        debugPrint("Error fetching AI memory: $e");
+      }
       return [];
     }
   }
@@ -421,9 +445,9 @@ class FirestoreService {
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
     } catch (e) {
-      debugPrint("Error updating AI memory: $e");
+      if (kDebugMode) {
+        debugPrint("Error updating AI memory: $e");
+      }
     }
   }
-
-  
 }

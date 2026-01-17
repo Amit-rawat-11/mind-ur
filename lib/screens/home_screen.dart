@@ -21,8 +21,6 @@ import '../constant/datetime.dart';
 import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
 import '../services/notification_helper.dart';
-import '../services/notification_service.dart';
-import 'account_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -157,8 +155,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Error fetching user data: $e');
-
       // ✅ LOG ERROR
       await AnalyticsService().logError(
         error: e.toString(),
@@ -210,14 +206,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 iconData: LucideIcons.user,
               ),
               Text(
-                "MIND-UR",
+                "MINDUR",
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: colors.onSurface,
                 ),
               ),
               CircularElevatedButton(
                 onpressed: () {
-                  context.pushNamed('personalization');
+                  context.pushNamed('notifications');
                 },
                 iconData: LucideIcons.bell,
               ),

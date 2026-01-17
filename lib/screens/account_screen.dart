@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:mindur/screens/login_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../services/analytics_service.dart';
@@ -539,7 +538,6 @@ class _AccountScreenState extends State<AccountScreen>
                           title: 'Log out',
                           onTap: () async {
                             // ✅ LOG SESSION END BEFORE LOGOUT
-                            
 
                             await FirebaseAuth.instance.signOut();
 
@@ -554,31 +552,140 @@ class _AccountScreenState extends State<AccountScreen>
                           title: 'Delete account',
                           color: colors.error,
                           onTap: () {
+                            final controller = TextEditingController();
+                            bool isDeleting = false;
+
                             showDialog(
                               context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('Delete Account?'),
-                                content: const Text(
-                                  'This will permanently delete all your data. This action cannot be undone.',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => context.pop(),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      FirebaseAuth.instance.currentUser
-                                          ?.delete();
-                                      context.go('/login');
-                                    },
-                                    child: Text(
-                                      'Delete',
-                                      style: TextStyle(color: colors.error),
+                              barrierDismissible: !isDeleting,
+                              builder: (dialogContext) {
+                                return StatefulBuilder(
+                                  builder: (context, setState) => AlertDialog(
+                                    title: const Text('Delete Account?'),
+                                    content: SingleChildScrollView(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'This will permanently delete all your data. This action cannot be undone.',
+                                          ),
+                                          const SizedBox(height: 12),
+                                          TextField(
+                                            controller: controller,
+                                            enabled: !isDeleting,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Type name or "delete"',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: isDeleting
+                                            ? null
+                                            : () => context.pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: isDeleting
+                                            ? null
+                                            : () async {
+                                                final user = FirebaseAuth
+                                                    .instance
+                                                    .currentUser;
+                                                if (user == null) {
+                                                  context.pop();
+                                                  context.go('/account');
+                                                  return;
+                                                }
+
+                                                final input = controller.text
+                                                    .trim()
+                                                    .toLowerCase();
+                                                final displayName = user
+                                                    .displayName
+                                                    ?.trim()
+                                                    .toLowerCase();
+
+                                                if (input.isEmpty ||
+                                                    (input != 'delete' &&
+                                                        input != displayName)) {
+                                                  context.pop();
+                                                  context.go('/account');
+                                                  return;
+                                                }
+
+                                                setState(
+                                                  () => isDeleting = true,
+                                                );
+
+                                                try {
+                                                  final uid = user.uid;
+                                                  final db = FirebaseFirestore
+                                                      .instance;
+                                                  final userRef = db
+                                                      .collection('users')
+                                                      .doc(uid);
+
+                                                  final subCollections = [
+                                                    'journals',
+                                                    'habits',
+                                                    'food',
+                                                    'workouts',
+                                                    'badges',
+                                                    'notification_analytics',
+                                                    'ai_sessions',
+                                                  ];
+
+                                                  for (final col
+                                                      in subCollections) {
+                                                    final snap = await userRef
+                                                        .collection(col)
+                                                        .get();
+                                                    for (final doc
+                                                        in snap.docs) {
+                                                      await doc.reference
+                                                          .delete();
+                                                    }
+                                                  }
+
+                                                  await userRef.delete();
+                                                  await user.delete();
+
+                                                  if (context.mounted) {
+                                                    context.pop();
+                                                    context.go('/login');
+                                                  }
+                                                } catch (_) {
+                                                  if (context.mounted) {
+                                                    context.pop();
+                                                    context.go('/account');
+                                                  }
+                                                }
+                                              },
+                                        child: isDeleting
+                                            ? const SizedBox(
+                                                width: 18,
+                                                height: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                            : Text(
+                                                'Delete',
+                                                style: TextStyle(
+                                                  color: colors.error,
+                                                ),
+                                              ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                );
+                              },
                             );
                           },
                         ),

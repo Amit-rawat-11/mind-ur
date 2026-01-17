@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -13,10 +13,20 @@ import 'route/app_routes.dart';
 import 'services/boot_receiver_handler.dart';
 import 'services/api_config_service.dart';
 import 'services/notification_service.dart';
-import 'services/analytics_service.dart';  // ✅ IMPORT
+import 'services/analytics_service.dart';
+import 'services/connectivity_service.dart';
+
+import 'screens/no_internet_screen.dart';
 
 import 'theme/theme.dart';
 import 'theme/theme_controller.dart';
+
+/// ✅ Debug-only logger
+void logDebug(String message) {
+  if (kDebugMode) {
+    debugPrint(message);
+  }
+}
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +35,6 @@ void main() async {
   await Hive.initFlutter();
   await AppThemeController.loadTheme();
 
-  // ✅ Initialize Firebase and Analytics
   await _initializeApp();
 
   runApp(const MyApp());
@@ -37,11 +46,9 @@ Future<void> _initializeApp() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    debugPrint('✅ Firebase initialized');
+    logDebug('✅ Firebase initialized');
 
-    // ✅ SETUP CRASHLYTICS
     if (!kIsWeb) {
-      // Pass all uncaught errors to Crashlytics
       FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
     }
 
@@ -52,35 +59,35 @@ Future<void> _initializeApp() async {
     }
 
     await ApiConfigService.load();
-    debugPrint('✅ API config loaded');
+    logDebug('✅ API config loaded');
 
     await NotificationService().initialize();
-    debugPrint('✅ Notification service initialized');
+    logDebug('✅ Notification service initialized');
 
     await BootReceiverHandler().rescheduleNotificationsAfterBoot();
-    debugPrint('✅ Notifications rescheduled');
+    logDebug('✅ Notifications rescheduled');
 
-    // ✅ LOG APP OPEN (tracks DAU automatically)
     await AnalyticsService().logAppOpen();
-    debugPrint('✅ Analytics initialized');
+    logDebug('✅ Analytics initialized');
 
-    // ✅ SET USER ID if logged in
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await AnalyticsService().setUserId(user.uid);
     }
 
+    await ConnectivityService().initialize();
+    logDebug('✅ Connectivity service initialized');
+
     FlutterNativeSplash.remove();
   } catch (e, stackTrace) {
-    debugPrint('❌ Initialization error: $e');
-    
-    // ✅ LOG ERROR TO CRASHLYTICS
+    logDebug('❌ Initialization error: $e');
+
     await AnalyticsService().logError(
       error: e.toString(),
       stackTrace: stackTrace,
       reason: 'App initialization failed',
     );
-    
+
     FlutterNativeSplash.remove();
   }
 }
@@ -100,8 +107,56 @@ class MyApp extends StatelessWidget {
           darkTheme: MindurTheme.darkTheme(),
           themeMode: mode,
           routerConfig: AppRoutes.router,
+          builder: (context, child) {
+            return ConnectivityMonitor(child: child ?? const SizedBox.shrink());
+          },
         );
       },
+    );
+  }
+}
+
+/// ✅ Global connectivity monitor
+class ConnectivityMonitor extends StatefulWidget {
+  final Widget child;
+
+  const ConnectivityMonitor({super.key, required this.child});
+
+  @override
+  State<ConnectivityMonitor> createState() => _ConnectivityMonitorState();
+}
+
+class _ConnectivityMonitorState extends State<ConnectivityMonitor> {
+  bool _hasInternet = true;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _hasInternet = ConnectivityService().isConnected;
+
+    ConnectivityService().connectionStatus.listen((isConnected) {
+      if (mounted && _hasInternet != isConnected) {
+        setState(() {
+          _hasInternet = isConnected;
+        });
+
+        logDebug(
+          _hasInternet
+              ? '✅ Internet restored - hiding overlay'
+              : '❌ No internet - showing overlay',
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        widget.child,
+        if (!_hasInternet) const Positioned.fill(child: NoInternetScreen()),
+      ],
     );
   }
 }

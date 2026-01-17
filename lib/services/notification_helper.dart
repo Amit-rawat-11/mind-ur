@@ -37,11 +37,12 @@ class NotificationHelper {
 
         if (isCompleted && lastCompletedAt != null) {
           DateTime completedDate;
-          
+
           if (lastCompletedAt is Timestamp) {
             completedDate = lastCompletedAt.toDate();
           } else if (lastCompletedAt is String) {
-            completedDate = DateTime.tryParse(lastCompletedAt) ?? DateTime.now();
+            completedDate =
+                DateTime.tryParse(lastCompletedAt) ?? DateTime.now();
           } else {
             continue;
           }
@@ -64,9 +65,15 @@ class NotificationHelper {
         totalCount: totalHabits,
       );
 
-      debugPrint('✅ Habit notification sent: $completedHabits/$totalHabits');
+      if (kDebugMode) {
+        debugPrint(
+          '📊 Habit check: $completedHabits/$totalHabits completed. Notification sent.',
+        );
+      }
     } catch (e) {
-      debugPrint('❌ Error checking habits: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error checking habits for notification: $e');
+      }
     }
   }
 
@@ -92,7 +99,7 @@ class NotificationHelper {
 
     try {
       final twoWeeksAgo = DateTime.now().subtract(const Duration(days: 14));
-      
+
       final snapshot = await _db
           .collection('users')
           .doc(uid)
@@ -132,10 +139,14 @@ class NotificationHelper {
         'byType': byType,
         'byHour': byHour,
         'mostActiveHour': mostActiveHour,
-        'openRate': totalOpened > 0 ? (totalOpened / 14).toStringAsFixed(1) : '0',
+        'openRate': totalOpened > 0
+            ? (totalOpened / 14).toStringAsFixed(1)
+            : '0',
       };
     } catch (e) {
-      debugPrint('Analytics fetch error: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error fetching notification analytics: $e');
+      }
       return {};
     }
   }
@@ -163,7 +174,9 @@ class NotificationHelper {
         };
       }).toList();
     } catch (e) {
-      debugPrint('Badge fetch error: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error fetching user badges: $e');
+      }
       return [];
     }
   }
@@ -175,7 +188,7 @@ class NotificationHelper {
 
     try {
       final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      
+
       final oldDocs = await _db
           .collection('users')
           .doc(uid)
@@ -189,9 +202,151 @@ class NotificationHelper {
       }
 
       await batch.commit();
-      debugPrint('🗑️ Cleared ${oldDocs.docs.length} old analytics entries');
+      if (kDebugMode) {
+        debugPrint('✅ Old notification analytics cleared');
+      }
     } catch (e) {
-      debugPrint('Analytics cleanup error: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Error clearing old analytics: $e');
+      }
     }
+  }
+  /// Get aggregated activity feed (Badges, Analytics, Journals, Habits)
+  static Future<List<Map<String, dynamic>>> getActivityFeed() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return [];
+
+    try {
+      final List<Map<String, dynamic>> activities = [];
+
+      // 1. Fetch Badges (Achievements)
+      final badgesSnapshot = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('badges')
+          .orderBy('earnedAt', descending: true)
+          .limit(20)
+          .get();
+
+      for (final doc in badgesSnapshot.docs) {
+        final data = doc.data();
+        activities.add({
+          'id': doc.id,
+          'type': 'achievement',
+          'title': '${data['emoji'] ?? '🏆'} ${data['title'] ?? 'Achievement'}',
+          'body': 'You earned a new badge!',
+          'timestamp':
+              (data['earnedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'isRead': true, // Badges are usually seen immediately
+        });
+      }
+
+      // 2. Fetch Notification Analytics (Interactions)
+      final analyticsSnapshot = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('notification_analytics')
+          .orderBy('openedAt', descending: true)
+          .limit(20)
+          .get();
+
+      for (final doc in analyticsSnapshot.docs) {
+        final data = doc.data();
+        final type = data['type'] ?? 'notification';
+
+        // Map types to display strings
+        String title = 'Notification';
+        String body = 'You interacted with a notification.';
+
+        if (type.toString().contains('journal')) {
+          title = '📝 Journal Reminder';
+          body = 'Time to reflect was handled.';
+        } else if (type.toString().contains('habit')) {
+          title = '✓ Habit Check-in';
+          body = 'Habit check-in completed.';
+        } else if (type.toString().contains('streak')) {
+          title = '🔥 Streak Alert';
+          body = 'Streak protection active.';
+        } else if (type.toString().contains('summary')) {
+          title = '📊 Daily Summary';
+          body = 'You checked your daily summary.';
+        }
+
+        activities.add({
+          'id': doc.id,
+          'type': _mapTypeToCategory(type),
+          'title': title,
+          'body': body,
+          'timestamp':
+              (data['openedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'isRead': true,
+        });
+      }
+
+      // 3. Fetch Recent Journals
+      final journalsSnapshot = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('journals')
+          .orderBy('timestamp', descending: true)
+          .limit(10)
+          .get();
+
+      for (final doc in journalsSnapshot.docs) {
+        final data = doc.data();
+        activities.add({
+          'id': doc.id,
+          'type': 'summary', // Classify as summary/activity
+          'title': '📝 Journal Entry',
+          'body': data['title'] ?? 'New entry created',
+          'timestamp':
+              (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'isRead': true,
+        });
+      }
+
+      // 4. Fetch Completed Habits (Approximation based on 'lastCompletedAt')
+      // Note: This only gets the *latest* completion per habit or requires a subcollection for history.
+      // For now, we'll use the 'habits' collection.
+      final habitsSnapshot = await _db
+          .collection('users')
+          .doc(uid)
+          .collection('habits')
+          .where('isCompleted', isEqualTo: true)
+          .get();
+
+      for (final doc in habitsSnapshot.docs) {
+        final data = doc.data();
+        if (data['lastCompletedAt'] != null) {
+          activities.add({
+            'id': doc.id,
+            'type': 'reminder', // Classify as reminder/habit
+            'title': '✓ Habit Completed',
+            'body': 'You completed "${data['title']}"',
+            'timestamp': (data['lastCompletedAt'] as Timestamp).toDate(),
+            'isRead': true,
+          });
+        }
+      }
+
+      // Sort by timestamp descending
+      activities.sort((a, b) => (b['timestamp'] as DateTime)
+          .compareTo(a['timestamp'] as DateTime));
+
+      return activities;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Error fetching activity feed: $e');
+      }
+      return [];
+    }
+  }
+
+  static String _mapTypeToCategory(String type) {
+    if (type.contains('achievement') || type.contains('badge'))
+      return 'achievement';
+    if (type.contains('streak')) return 'streak';
+    if (type.contains('summary') || type.contains('journal')) return 'summary';
+    return 'reminder';
   }
 }

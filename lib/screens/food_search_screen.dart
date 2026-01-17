@@ -9,7 +9,6 @@ import '../components/search_card.dart';
 import '../models/food_item.dart';
 import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
-import 'AddFoodEntryScreen.dart';
 
 class FoodSearchSceen extends StatefulWidget {
   const FoodSearchSceen({super.key});
@@ -70,7 +69,6 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
 
       _fadeController.forward();
     } catch (e) {
-      debugPrint("Error fetching foods: $e");
       setState(() => isLoading = false);
     }
   }

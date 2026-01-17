@@ -179,7 +179,7 @@ class SessionDrawer extends StatelessWidget {
           ),
         ),
         onTap: () {
-          debugPrint("[Drawer] Session tapped: ${session['id']}");
+      
           Navigator.pop(context);
           onSessionTap(session['id']);
         },

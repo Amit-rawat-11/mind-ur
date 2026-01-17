@@ -70,9 +70,13 @@ class NotificationService {
       );
 
       _initialized = true;
-      debugPrint('✅ Notification service initialized with channels');
+      if (kDebugMode) {
+        debugPrint('✅ NotificationService initialized successfully');
+      }
     } catch (e) {
-      debugPrint('❌ Notification initialization error: $e');
+      if (kDebugMode) {
+        debugPrint('❌ Notification initialization error: $e');
+      }
     }
   }
 
@@ -161,7 +165,9 @@ class NotificationService {
       ),
     );
 
-    debugPrint('✅ All notification channels created');
+    if (kDebugMode) {
+      debugPrint('✅ All notification channels created');
+    }
   }
 
   // ==================== PERMISSIONS ====================
@@ -172,7 +178,9 @@ class NotificationService {
       // 1. Request notification permission (Android 13+)
       final notificationStatus = await Permission.notification.request();
       if (!notificationStatus.isGranted) {
-        debugPrint('❌ Notification permission denied');
+        if (kDebugMode) {
+          debugPrint('❌ Notification permission denied');
+        }
         return false;
       }
 
@@ -180,7 +188,9 @@ class NotificationService {
       if (defaultTargetPlatform == TargetPlatform.android) {
         final alarmStatus = await Permission.scheduleExactAlarm.request();
         if (!alarmStatus.isGranted) {
-          debugPrint('⚠️ Exact alarm permission denied - notifications may be delayed');
+          if (kDebugMode) {
+            debugPrint('⚠️ Exact alarm permission denied - notifications may be delayed');
+          }
         }
       }
 
@@ -200,10 +210,14 @@ class NotificationService {
         return granted ?? false;
       }
 
-      debugPrint('✅ All permissions granted');
+      if (kDebugMode) {
+        debugPrint('✅ All permissions granted');
+      }
       return true;
     } catch (e) {
-      debugPrint('❌ Permission request error: $e');
+      if (kDebugMode) {
+        debugPrint('❌ Permission request error: $e');
+      }
       return false;
     }
   }
@@ -217,13 +231,19 @@ class NotificationService {
         final result = await Permission.ignoreBatteryOptimizations.request();
         
         if (result.isGranted) {
-          debugPrint('✅ Battery optimization exemption granted');
+          if (kDebugMode) {
+            debugPrint('✅ Battery optimization exemption granted');
+          }
         } else {
-          debugPrint('⚠️ Battery optimization exemption denied - notifications may not work in background');
+          if (kDebugMode) {
+            debugPrint('⚠️ Battery optimization exemption denied - notifications may not work in background');
+          }
         }
       }
     } catch (e) {
-      debugPrint('⚠️ Battery optimization request not supported: $e');
+      if (kDebugMode) {
+        debugPrint('⚠️ Battery optimization request not supported: $e');
+      }
     }
   }
 
@@ -231,7 +251,9 @@ class NotificationService {
   
   /// Track notification opens
   void _onNotificationTapped(NotificationResponse response) {
-    debugPrint('Notification tapped: ${response.payload}');
+    if (kDebugMode) {
+      debugPrint('Notification tapped: ${response.payload}');
+    }
     _trackNotificationOpen(response.id ?? 0, response.payload ?? 'unknown');
   }
 
@@ -250,9 +272,13 @@ class NotificationService {
         'openedAt': FieldValue.serverTimestamp(),
         'device': 'mobile',
       });
-      debugPrint('📊 Analytics: Notification $notificationId opened');
+      if (kDebugMode) {
+        debugPrint('📊 Analytics: Notification $notificationId opened');
+      }
     } catch (e) {
-      debugPrint('Analytics error: $e');
+      if (kDebugMode) {
+        debugPrint('Analytics error: $e');
+      }
     }
   }
 
@@ -270,7 +296,7 @@ class NotificationService {
   }) async {
     final androidDetails = AndroidNotificationDetails(
       channelId ?? 'mindur_channel',
-      channelName ?? 'Mind-ur Notifications',
+      channelName ?? 'Mindur Notifications',
       channelDescription: 'Notifications for journal reminders and habits',
       importance: importance,
       priority: Priority.high,
@@ -337,10 +363,14 @@ class NotificationService {
           .reduce((a, b) => a.value > b.value ? a : b)
           .key;
 
-      debugPrint('📊 Smart scheduling: $timeSlot shifted from $defaultHour to $mostActiveHour');
+      if (kDebugMode) {
+        debugPrint('📊 Smart scheduling: $timeSlot shifted from $defaultHour to $mostActiveHour');
+      }
       return mostActiveHour;
     } catch (e) {
-      debugPrint('Smart scheduling error: $e');
+      if (kDebugMode) {
+        debugPrint('Smart scheduling error: $e');
+      }
       return defaultHour;
     }
   }
@@ -476,7 +506,9 @@ class NotificationService {
       payload: 'journal_$timing',
     );
 
-    debugPrint('✅ Journal reminder scheduled for $hour:$minute');
+    if (kDebugMode) {
+      debugPrint('✅ Journal reminder scheduled for $hour:$minute');
+    }
   }
 
   // ==================== HABIT CHECK-INS ====================
@@ -534,7 +566,9 @@ class NotificationService {
       payload: 'habit_night',
     );
 
-    debugPrint('✅ All 4 habit check-ins scheduled');
+    if (kDebugMode) {
+      debugPrint('✅ All 4 habit check-ins scheduled');
+    }
   }
 
   /// Send personalized habit completion notification
@@ -613,10 +647,14 @@ class NotificationService {
           channelName: 'Streak Protection',
           importance: Importance.max,
         );
-        debugPrint('⚠️ Streak warning sent');
+        if (kDebugMode) {
+          debugPrint('⚠️ Streak warning sent');
+        }
       }
     } catch (e) {
-      debugPrint('Error checking streak: $e');
+      if (kDebugMode) {
+        debugPrint('Error checking streak: $e');
+      }
     }
   }
 
@@ -635,7 +673,9 @@ class NotificationService {
       payload: 'streak_warning',
     );
 
-    debugPrint('✅ Streak warning check scheduled for $smartHour PM daily');
+    if (kDebugMode) {
+      debugPrint('✅ Streak warning check scheduled for $smartHour PM daily');
+    }
   }
 
   /// Schedule streak milestone notification
@@ -674,7 +714,9 @@ class NotificationService {
       await _checkHabitMilestone(uid);
       await _checkPerfectWeek(uid);
     } catch (e) {
-      debugPrint('Achievement check error: $e');
+      if (kDebugMode) {
+        debugPrint('Achievement check error: $e');
+      }
     }
   }
 
@@ -755,7 +797,9 @@ class NotificationService {
         await _saveBadge('habit_$totalCompletions', '⚡', 'Habit Master');
       }
     } catch (e) {
-      debugPrint('Habit milestone error: $e');
+      if (kDebugMode) {
+        debugPrint('Habit milestone error: $e');
+      }
     }
   }
 
@@ -790,7 +834,9 @@ class NotificationService {
         await _saveBadge('perfect_week_${now.millisecondsSinceEpoch}', '🌟', 'Perfect Week');
       }
     } catch (e) {
-      debugPrint('Perfect week check error: $e');
+      if (kDebugMode) {
+        debugPrint('Perfect week check error: $e');
+      }
     }
   }
 
@@ -809,9 +855,13 @@ class NotificationService {
         'title': title,
         'earnedAt': FieldValue.serverTimestamp(),
       });
-      debugPrint('🏆 Badge saved: $badgeId');
+      if (kDebugMode) {
+        debugPrint('🏆 Badge saved: $badgeId');
+      }
     } catch (e) {
-      debugPrint('Badge save error: $e');
+      if (kDebugMode) {
+        debugPrint('Badge save error: $e');
+      }
     }
   }
 
@@ -889,9 +939,13 @@ class NotificationService {
         channelName: 'Daily Summaries',
       );
 
-      debugPrint('📊 Daily summary sent');
+      if (kDebugMode) {
+        debugPrint('📊 Daily summary sent');
+      }
     } catch (e) {
-      debugPrint('Daily summary error: $e');
+      if (kDebugMode) {
+        debugPrint('Daily summary error: $e');
+      }
     }
   }
 
@@ -908,7 +962,9 @@ class NotificationService {
       payload: 'daily_summary',
     );
 
-    debugPrint('✅ Daily summary scheduled for 10:30 PM');
+    if (kDebugMode) {
+      debugPrint('✅ Daily summary scheduled for 10:30 PM');
+    }
   }
 
   // ==================== ENGAGEMENT NOTIFICATIONS ====================
@@ -956,7 +1012,9 @@ class NotificationService {
       payload: 'weekly_review',
     );
 
-    debugPrint('✅ Weekly review scheduled for Sundays at 7 PM');
+    if (kDebugMode) {
+      debugPrint('✅ Weekly review scheduled for Sundays at 7 PM');
+    }
   }
 
   /// Schedule motivational quote (random time between 10 AM - 5 PM)
@@ -989,7 +1047,9 @@ class NotificationService {
       payload: 'motivational_quote',
     );
 
-    debugPrint('✅ Motivational quote scheduled');
+    if (kDebugMode) {
+      debugPrint('✅ Motivational quote scheduled');
+    }
   }
 
   /// Schedule mid-week check-in (Wednesday 12 PM)
@@ -1032,7 +1092,9 @@ class NotificationService {
       payload: 'midweek_checkin',
     );
 
-    debugPrint('✅ Mid-week check-in scheduled for Wednesdays at 12 PM');
+    if (kDebugMode) {
+      debugPrint('✅ Mid-week check-in scheduled for Wednesdays at 12 PM');
+    }
   }
 
   /// Schedule weekend reflection (Saturday 10 AM)
@@ -1075,14 +1137,18 @@ class NotificationService {
       payload: 'weekend_reflection',
     );
 
-    debugPrint('✅ Weekend reflection scheduled for Saturdays at 10 AM');
+    if (kDebugMode) {
+      debugPrint('✅ Weekend reflection scheduled for Saturdays at 10 AM');
+    }
   }
 
   // ==================== SCHEDULE ALL ====================
   
   /// Schedule all app notifications at once
   Future<void> scheduleAllNotifications(String journalTiming) async {
-    debugPrint('📅 Scheduling all notifications with smart features...');
+    if (kDebugMode) {
+      debugPrint('📅 Scheduling all notifications with smart features...');
+    }
     
     await scheduleJournalReminder(journalTiming);
     await scheduleHabitCheckIns();
@@ -1093,7 +1159,9 @@ class NotificationService {
     await scheduleWeekendReflection();
     await scheduleDailySummary();
     
-    debugPrint('✅ All notifications scheduled with smart scheduling!');
+    if (kDebugMode) {
+      debugPrint('✅ All notifications scheduled with smart scheduling!');
+    }
   }
 
   // ==================== CANCELLATION ====================
@@ -1113,7 +1181,9 @@ class NotificationService {
 
   Future<void> cancelAll() async {
     await _notifications.cancelAll();
-    debugPrint('✅ All notifications cancelled');
+    if (kDebugMode) {
+      debugPrint('✅ All notifications cancelled');
+    }
   }
 
   // ==================== UTILITIES ====================

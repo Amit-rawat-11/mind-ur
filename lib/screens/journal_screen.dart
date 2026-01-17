@@ -8,7 +8,6 @@ import 'package:mindur/theme/app_background.dart';
 
 import '../components/recent_entry_card.dart';
 import '../services/analytics_service.dart';
-import 'journal_edit_screen.dart';
 
 class JournalScreen extends StatefulWidget {
   const JournalScreen({super.key});
@@ -96,7 +95,7 @@ class _JournalScreenState extends State<JournalScreen> {
             if (entries.isEmpty) {
               final demoJournals = [
                 {
-                  'title': 'Welcome to MIND-UR ✨',
+                  'title': 'Welcome to MINDUR ✨',
                   'content':
                       'Tap the + button above to add your first journal entry.',
                 },

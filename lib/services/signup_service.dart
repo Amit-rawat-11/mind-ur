@@ -24,7 +24,9 @@ class SignupService {
 
       final User? user = userCredential.user;
       if (user == null) {
-        debugPrint("Account creation failed. Please try again.");
+        if (kDebugMode) {
+          debugPrint('❌ User is null after signup');
+        }
         return 'Account creation failed. Please try again.';
       }
 
@@ -64,7 +66,9 @@ class SignupService {
 
       return null; // success
     } on FirebaseAuthException catch (e) {
-      debugPrint('🔥 Signup Firebase error: ${e.code}');
+      if (kDebugMode) {
+        debugPrint('🔥 Firebase signup error: ${e.code}');
+      }
 
       switch (e.code) {
         case 'email-already-in-use':
@@ -79,7 +83,9 @@ class SignupService {
           return e.message ?? 'Signup failed. Please try again.';
       }
     } catch (e) {
-      debugPrint('❌ Signup error: $e');
+      if (kDebugMode) {
+        debugPrint('❌ Unexpected signup error: $e');
+      }
       return 'An unknown error occurred. Please try again.';
     }
   }
@@ -108,7 +114,9 @@ class SignupService {
 
       return null; // success
     } on FirebaseAuthException catch (e) {
-      debugPrint('🔥 Firebase login error: ${e.code}');
+      if (kDebugMode) {
+        debugPrint('🔥 Firebase login error: ${e.code}');
+      }
 
       switch (e.code) {
         case 'invalid-email':
@@ -126,7 +134,9 @@ class SignupService {
           return 'Login failed. Please try again.';
       }
     } catch (e) {
-      debugPrint('❌ Unexpected login error: $e');
+      if (kDebugMode) {
+        debugPrint('❌ Unexpected login error: $e');
+      }
       return 'Something went wrong. Please try again.';
     }
   }

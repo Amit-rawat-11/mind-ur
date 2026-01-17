@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mindur - Your Mindful Companion</title>
+    <meta name="description"
+        content="Mindur is your personal companion for mental wellness, habit tracking, and mindful living. Meet Aurora, your AI guide.">
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <div id="header-placeholder"></div>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="hero-content fade-up">
+                <div class="badge">Early Access Now Available</div>
+                <h1>Mindful Living,<br>Intelligently designed.</h1>
+                <p>Your personal companion for mental wellness, habit tracking, and growth. Powered by Aurora AI.</p>
+                <div class="cta-group">
+                    <a href="https://play.google.com/store/apps/details?id=com.mindur.app" target="_blank"
+                        class="btn-primary">
+                        <i data-lucide="play"></i> Get it on Google Play
+                    </a>
+                    <button class="btn-outline" style="opacity: 0.6; cursor: default;" title="Coming Soon">
+                        <i data-lucide="apple"></i> iOS Coming Soon
+                    </button>
+                </div>
+                <div class="stats-row">
+                    <div class="stat">
+                        <span>10k+</span>
+                        <label>Mindful Users</label>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="stat">
+                        <span>4.9</span>
+                        <label>App Rating</label>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image parallax-tilt">
+                <div class="glow-bg"></div>
+                <!-- Using placeholder if image doesn't exist, but trying existing path -->
+                <img src="assets/images/hero.png" alt="Mindur App Interface" class="phone-mockup"
+                    onerror="this.onerror=null; this.src='https://placehold.co/300x600/161616/5FB3A2?text=App+Preview';">
+
+                <!-- Floating Elements -->
+                <div class="float-card glass card-1">
+                    <i data-lucide="check-circle" class="icon-success"></i>
+                    <div class="text">
+                        <span>Meditation</span>
+                        <small>Completed</small>
+                    </div>
+                </div>
+                <div class="float-card glass card-2">
+                    <div class="avatar">A</div>
+                    <div class="text">
+                        <span>Aurora says...</span>
+                        <small>Keep going!</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic How It Works (The Day Flow) -->
+        <section class="day-flow">
+            <div class="section-header fade-on-scroll">
+                <h2>A Day with Mindur</h2>
+                <p>Designed to fit seamlessly into your life, from sunrise to sunset.</p>
+            </div>
+
+            <!-- Morning -->
+            <div class="flow-step">
+                <div class="text-content fade-on-scroll">
+                    <div class="time-badge"><i data-lucide="sun"></i> Morning</div>
+                    <h3>Start with Intention</h3>
+                    <p>Wake up to a personalized morning briefing. Check your habit goals and set your intention for the
+                        day
+                        with a quick 2-minute focus session.</p>
+                </div>
+                <div class="visual-content tilt-card fade-on-scroll delay-1">
+                    <img src="assets/images/hero.png" alt="Morning Routine" class="screen-shot"
+                        onerror="this.style.display='none'">
+
+                    <!-- Fallback visualization if image fails -->
+                    <div class="aurora-preview" style="display: none;" id="fallback-1">
+                        <div class="aurora-blob"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Afternoon -->
+            <div class="flow-step reverse">
+                <div class="text-content fade-on-scroll">
+                    <div class="time-badge"><i data-lucide="coffee"></i> Afternoon</div>
+                    <h3>Stay Balanced</h3>
+                    <p>Feeling stressed at work? Aurora is just a tap away. Get instant grounding exercises or vent
+                        about
+                        your day to a companion who truly listens.</p>
+                </div>
+                <div class="visual-content tilt-card fade-on-scroll delay-1">
+                    <div class="aurora-preview">
+                        <!-- CSS Aurora Animation -->
+                        <div class="aurora-blob"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evening -->
+            <div class="flow-step">
+                <div class="text-content fade-on-scroll">
+                    <div class="time-badge"><i data-lucide="moon"></i> Evening</div>
+                    <h3>Reflect & Unwind</h3>
+                    <p>End your day with clarity. Log your mood, review your insights, and let go of the day's stress
+                        with
+                        guided journaling prompts.</p>
+                </div>
+                <div class="visual-content tilt-card fade-on-scroll delay-1">
+                    <img src="assets/images/journal.png" alt="Evening Journal" class="screen-shot"
+                        onerror="this.onerror=null; this.src='https://placehold.co/300x600/161616/5FB3A2?text=Journal';">
+                </div>
+            </div>
+        </section>
+
+        <!-- Aurora Section -->
+        <section id="aurora" class="aurora-section">
+            <div class="aurora-container glass fade-on-scroll">
+                <div class="content">
+                    <div class="badge-soft">Meet Aurora</div>
+                    <h2>Not just a chatbot.<br>A companion.</h2>
+                    <p>Aurora understands context, emotions, and your personal goals. Whether you need motivation, a
+                        venting
+                        space, or advice, she's here.</p>
+                    <div class="chat-demo">
+                        <div class="msg user">I'm feeling a bit overwhelmed today.</div>
+                        <div class="msg aurora">
+                            <div class="typing"><span></span><span></span><span></span></div>
+                            I hear you. Take a deep breath. Would you like to try a 2-minute grounding exercise?
+                        </div>
+                    </div>
+                </div>
+                <div class="visual">
+                    <!-- Abstract Aurora Animation handled by CSS/JS -->
+                    <div class="aurora-glow"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="testimonials">
+            <div class="section-header fade-on-scroll">
+                <h2>Stories from our Community</h2>
+            </div>
+
+            <div class="testimonial-grid">
+                <div class="review-card glass fade-on-scroll">
+                    <div class="stars">★★★★★</div>
+                    <p>"I've tried every habit tracker out there. Mindur is different. It actually cares about how I
+                        *feel*,
+                        not just what I do."</p>
+                    <div class="user-info">
+                        <div class="avatar-sm">S</div>
+                        <div>
+                            <strong>Sarah J.</strong>
+                            <small>Using for 3 months</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass fade-on-scroll delay-1">
+                    <div class="stars">★★★★★</div>
+                    <p>"Aurora is genuinely helpful. It's like having a wise friend in your pocket 24/7. The privacy
+                        focus
+                        is a huge plus."</p>
+                    <div class="user-info">
+                        <div class="avatar-sm">M</div>
+                        <div>
+                            <strong>Marcus T.</strong>
+                            <small>Using for 1 month</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="review-card glass fade-on-scroll delay-2">
+                    <div class="stars">★★★★★</div>
+                    <p>"The design is breathtaking. It's the only app I actually look forward to opening every single
+                        day."
+                    </p>
+                    <div class="user-info">
+                        <div class="avatar-sm">E</div>
+                        <div>
+                            <strong>Elena R.</strong>
+                            <small>Using for 6 months</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="js/main.js"></script>
+</body>
+
+</html>
