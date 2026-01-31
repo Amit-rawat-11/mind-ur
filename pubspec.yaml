@@ -62,6 +62,7 @@ dependencies:
   firebase_performance: ^0.10.0+8
   connectivity_plus: ^6.1.2  # Internet monitoring
   http: ^1.2.2  
+  url_launcher: ^6.3.2
 
   
 dev_dependencies:
@@ -153,4 +154,3 @@ flutter_native_splash:
   android_12:
     image: assets/branding/splash.png
     color: "#0F0F0F"
-

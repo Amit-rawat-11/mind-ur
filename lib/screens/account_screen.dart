@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/analytics_service.dart';
 import '../services/firebase_service.dart';
@@ -35,6 +36,18 @@ class _AccountScreenState extends State<AccountScreen>
     vsync: this,
     duration: const Duration(milliseconds: 400),
   )..forward();
+
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+
+    final success = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!success && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Unable to open link')));
+    }
+  }
 
   @override
   void initState() {
@@ -488,29 +501,29 @@ class _AccountScreenState extends State<AccountScreen>
                           icon: LucideIcons.lock,
                           title: 'Privacy Policy',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Privacy policy coming soon'),
-                              ),
+                            _openUrl(
+                              'https://www.mindur.app/privacy-policy.html',
                             );
                           },
                         ),
+
                         _tile(
                           icon: LucideIcons.fileText,
                           title: 'Terms of Service',
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Terms of service coming soon'),
-                              ),
+                            _openUrl(
+                              'https://www.mindur.app/terms-of-service.html',
                             );
                           },
                         ),
+
                         _tile(
                           icon: LucideIcons.mail,
                           title: 'Contact Support',
                           subtitle: 'support@mindur.app',
-                          onTap: () {},
+                          onTap: () {
+                            _openUrl('https://www.mindur.app/contact.html');
+                          },
                         ),
                         FutureBuilder<PackageInfo>(
                           future: PackageInfo.fromPlatform(),
