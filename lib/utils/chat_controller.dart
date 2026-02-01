@@ -227,8 +227,9 @@ Stay consistent as **Dr. Aurora**, Mindur caring AI therapist. ❤️
     if (_isDisposed ||
         _isSending ||
         currentSessionId == null ||
-        text.trim().isEmpty)
+        text.trim().isEmpty) {
       return;
+    }
 
     _hasUserInteracted = true;
 
@@ -273,11 +274,12 @@ Stay consistent as **Dr. Aurora**, Mindur caring AI therapist. ❤️
     } catch (_) {
       _cancelThinking();
     } finally {
-      if (_isDisposed) return;
-      _sendWatchdog?.cancel();
-      _isSending = false;
-      isSendingNotifier.value = false;
-      isTypingNotifier.value = false;
+      if (!_isDisposed) {
+        _sendWatchdog?.cancel();
+        _isSending = false;
+        isSendingNotifier.value = false;
+        isTypingNotifier.value = false;
+      }
     }
   }
 

@@ -1,46 +1,53 @@
 class NutritionCalculator {
-  /// Returns a map with maintenance, targetCalories & targetProtein
+  /// Calculates daily nutrition targets
+  ///
+  /// Returns:
+  /// - maintenance: calories to maintain weight
+  /// - calories: target calories based on goal
+  /// - protein: grams/day
   static Map<String, double> calculate({
-    required double age, // in years
-    required double height, // in cm
-    required double weight, // in kg
-    required String goal,   // "Muscle Building", "Lose Weight", "Stay Fit"
-    bool isMale = true, // default male
+    required double age, // years
+    required double height, // cm
+    required double weight, // kg
+    required String goal, // "Muscle Building", "Lose Weight", "Stay Fit"
+    bool isMale = true, // false = female
   }) {
-    // ✅ BMR Calculation
-    double bmr;
+    // Activity level: average student + working professional
+    const double activityLevel = 1.5;
 
-    if (isMale) {
-      // Male BMR
-      bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
-    } else {
-      // Female BMR (UNUSED for now)
-      // bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
-      bmr = 0; // placeholder
-    }
+    // BMR (Mifflin–St Jeor)
+    final double bmr = isMale
+        ? (10 * weight) + (6.25 * height) - (5 * age) + 5
+        : (10 * weight) + (6.25 * height) - (5 * age) - 161;
 
-    // Maintenance calories = BMR * activity factor (assuming 1.3 sedentary)
-    double maintenanceCalories = bmr * 1.3;
+    // Maintenance calories
+    final double maintenanceCalories = bmr * activityLevel;
 
-    double targetCalories = maintenanceCalories;
-    double targetProtein = weight * 1.6;
+    double targetCalories;
+    double targetProtein;
 
-    if (goal == "Muscle Building") {
-      targetCalories = maintenanceCalories + 500; 
-      targetProtein = weight * 2.0;
-    } else if (goal == "Lose Weight") {
-      targetCalories = maintenanceCalories - 300; 
-      targetProtein = weight * 1.8;
-    } else {
-      // Stay Fit → maintain
-      targetCalories = maintenanceCalories + 200;
-      targetProtein = weight * 1.6;
+    switch (goal) {
+      case "Muscle Building":
+        // Lean bulk (~12% surplus)
+        targetCalories = maintenanceCalories * 1.12;
+        targetProtein = weight * 2.0;
+        break;
+
+      case "Lose Weight":
+        // Sustainable cut (~15% deficit)
+        targetCalories = maintenanceCalories * 0.85;
+        targetProtein = weight * 1.9;
+        break;
+
+      default: // Stay Fit
+        targetCalories = maintenanceCalories;
+        targetProtein = weight * 1.6;
     }
 
     return {
-      "maintenance": maintenanceCalories,
-      "calories": targetCalories,
-      "protein": targetProtein,
+      "maintenance": maintenanceCalories.roundToDouble(),
+      "calories": targetCalories.roundToDouble(),
+      "protein": targetProtein.roundToDouble(),
     };
   }
 }
