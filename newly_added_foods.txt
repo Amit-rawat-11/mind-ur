@@ -1,0 +1,315 @@
+List of Newly Added Foods:
+------------------------------
+- Regular Cow Milk
+- Full Cream Buffalo Milk
+- Toned Milk
+- Double Toned Milk
+- Soy Milk
+- Almond Milk
+- Oat Milk
+- Coconut Milk
+- Lactose-Free Milk
+- Camel Milk
+- Goat Milk
+- Skimmed Milk
+- Fresh Apple
+- Apple Shake (with Sugar)
+- Apple Shake (No Sugar)
+- Apple Smoothie
+- Apple Lassi
+- Apple Chaas
+- Apple Juice (Fresh)
+- Fresh Banana
+- Banana Shake (with Sugar)
+- Banana Shake (No Sugar)
+- Banana Smoothie
+- Banana Lassi
+- Banana Chaas
+- Banana Juice (Fresh)
+- Fresh Mango
+- Mango Shake (with Sugar)
+- Mango Shake (No Sugar)
+- Mango Smoothie
+- Mango Lassi
+- Mango Chaas
+- Mango Juice (Fresh)
+- Fresh Papaya
+- Papaya Shake (with Sugar)
+- Papaya Shake (No Sugar)
+- Papaya Smoothie
+- Papaya Lassi
+- Papaya Chaas
+- Papaya Juice (Fresh)
+- Fresh Guava
+- Guava Shake (with Sugar)
+- Guava Shake (No Sugar)
+- Guava Smoothie
+- Guava Lassi
+- Guava Chaas
+- Guava Juice (Fresh)
+- Fresh Orange
+- Orange Shake (with Sugar)
+- Orange Shake (No Sugar)
+- Orange Smoothie
+- Orange Lassi
+- Orange Chaas
+- Orange Juice (Fresh)
+- Fresh Pineapple
+- Pineapple Shake (with Sugar)
+- Pineapple Shake (No Sugar)
+- Pineapple Smoothie
+- Pineapple Lassi
+- Pineapple Chaas
+- Pineapple Juice (Fresh)
+- Fresh Strawberry
+- Strawberry Shake (with Sugar)
+- Strawberry Shake (No Sugar)
+- Strawberry Smoothie
+- Strawberry Lassi
+- Strawberry Chaas
+- Strawberry Juice (Fresh)
+- Fresh Watermelon
+- Watermelon Shake (with Sugar)
+- Watermelon Shake (No Sugar)
+- Watermelon Smoothie
+- Watermelon Lassi
+- Watermelon Chaas
+- Watermelon Juice (Fresh)
+- Fresh Muskmelon
+- Muskmelon Shake (with Sugar)
+- Muskmelon Shake (No Sugar)
+- Muskmelon Smoothie
+- Muskmelon Lassi
+- Muskmelon Chaas
+- Muskmelon Juice (Fresh)
+- Fresh Grapes
+- Grapes Shake (with Sugar)
+- Grapes Shake (No Sugar)
+- Grapes Smoothie
+- Grapes Lassi
+- Grapes Chaas
+- Grapes Juice (Fresh)
+- Fresh Pomegranate
+- Pomegranate Shake (with Sugar)
+- Pomegranate Shake (No Sugar)
+- Pomegranate Smoothie
+- Pomegranate Lassi
+- Pomegranate Chaas
+- Pomegranate Juice (Fresh)
+- Fresh Kiwi
+- Kiwi Shake (with Sugar)
+- Kiwi Shake (No Sugar)
+- Kiwi Smoothie
+- Kiwi Lassi
+- Kiwi Chaas
+- Kiwi Juice (Fresh)
+- Fresh Dragon Fruit
+- Dragon Fruit Shake (with Sugar)
+- Dragon Fruit Shake (No Sugar)
+- Dragon Fruit Smoothie
+- Dragon Fruit Lassi
+- Dragon Fruit Chaas
+- Dragon Fruit Juice (Fresh)
+- Fresh Pear
+- Pear Shake (with Sugar)
+- Pear Shake (No Sugar)
+- Pear Smoothie
+- Pear Lassi
+- Pear Chaas
+- Pear Juice (Fresh)
+- Fresh Plum
+- Plum Shake (with Sugar)
+- Plum Shake (No Sugar)
+- Plum Smoothie
+- Plum Lassi
+- Plum Chaas
+- Plum Juice (Fresh)
+- Fresh Peach
+- Peach Shake (with Sugar)
+- Peach Shake (No Sugar)
+- Peach Smoothie
+- Peach Lassi
+- Peach Chaas
+- Peach Juice (Fresh)
+- Fresh Lychee
+- Lychee Shake (with Sugar)
+- Lychee Shake (No Sugar)
+- Lychee Smoothie
+- Lychee Lassi
+- Lychee Chaas
+- Lychee Juice (Fresh)
+- Fresh Cherry
+- Cherry Shake (with Sugar)
+- Cherry Shake (No Sugar)
+- Cherry Smoothie
+- Cherry Lassi
+- Cherry Chaas
+- Cherry Juice (Fresh)
+- Soya Chunks Curry
+- Soya Bhurji
+- Soya Tikka
+- Soya Pulao
+- Soya Keema
+- Soya Manchurian
+- Chilli Soya
+- Soya Patty
+- Soya Kathi Roll
+- Moong Dal Tadka
+- Moong Dal Fry
+- Moong Dal Palak
+- Moong Dal Lauki
+- Moong Dal Jeera
+- Toor Dal Tadka
+- Toor Dal Fry
+- Toor Dal Palak
+- Toor Dal Lauki
+- Toor Dal Jeera
+- Masoor Dal Tadka
+- Masoor Dal Fry
+- Masoor Dal Palak
+- Masoor Dal Lauki
+- Masoor Dal Jeera
+- Urad Dal Tadka
+- Urad Dal Fry
+- Urad Dal Palak
+- Urad Dal Lauki
+- Urad Dal Jeera
+- Chana Dal Tadka
+- Chana Dal Palak
+- Chana Dal Lauki
+- Chana Dal Jeera
+- Mix Dal Tadka
+- Mix Dal Fry
+- Mix Dal Palak
+- Mix Dal Lauki
+- Mix Dal Jeera
+- Panchratna Dal Tadka
+- Panchratna Dal Fry
+- Panchratna Dal Palak
+- Panchratna Dal Lauki
+- Panchratna Dal Jeera
+- Kali Dal Tadka
+- Kali Dal Fry
+- Kali Dal Palak
+- Kali Dal Lauki
+- Kali Dal Jeera
+- Aloo Masala
+- Aloo Dry (Sukhi Sabzi)
+- Aloo Curry
+- Aloo Fry
+- Aloo Roasted
+- Gobi Masala
+- Gobi Dry (Sukhi Sabzi)
+- Gobi Curry
+- Gobi Fry
+- Gobi Roasted
+- Matar Masala
+- Matar Dry (Sukhi Sabzi)
+- Matar Curry
+- Matar Fry
+- Matar Roasted
+- Bhindi Dry (Sukhi Sabzi)
+- Bhindi Curry
+- Bhindi Roasted
+- Baingan Masala
+- Baingan Dry (Sukhi Sabzi)
+- Baingan Curry
+- Baingan Fry
+- Baingan Roasted
+- Tori Masala
+- Tori Dry (Sukhi Sabzi)
+- Tori Curry
+- Tori Fry
+- Tori Roasted
+- Lauki Masala
+- Lauki Dry (Sukhi Sabzi)
+- Lauki Curry
+- Lauki Fry
+- Lauki Roasted
+- Kaddu Masala
+- Kaddu Dry (Sukhi Sabzi)
+- Kaddu Curry
+- Kaddu Fry
+- Kaddu Roasted
+- Shimla Mirch Masala
+- Shimla Mirch Dry (Sukhi Sabzi)
+- Shimla Mirch Curry
+- Shimla Mirch Fry
+- Shimla Mirch Roasted
+- Karela Masala
+- Karela Dry (Sukhi Sabzi)
+- Karela Curry
+- Karela Fry
+- Karela Roasted
+- Gajar Masala
+- Gajar Dry (Sukhi Sabzi)
+- Gajar Curry
+- Gajar Fry
+- Gajar Roasted
+- Mooli Masala
+- Mooli Dry (Sukhi Sabzi)
+- Mooli Curry
+- Mooli Fry
+- Mooli Roasted
+- Methi Masala
+- Methi Dry (Sukhi Sabzi)
+- Methi Curry
+- Methi Fry
+- Methi Roasted
+- Palak Masala
+- Palak Dry (Sukhi Sabzi)
+- Palak Curry
+- Palak Fry
+- Palak Roasted
+- Patta Gobi Masala
+- Patta Gobi Dry (Sukhi Sabzi)
+- Patta Gobi Curry
+- Patta Gobi Fry
+- Patta Gobi Roasted
+- Mushroom Dry (Sukhi Sabzi)
+- Mushroom Curry
+- Mushroom Fry
+- Mushroom Roasted
+- Baby Corn Masala
+- Baby Corn Dry (Sukhi Sabzi)
+- Baby Corn Curry
+- Baby Corn Fry
+- Baby Corn Roasted
+- Boiled Egg
+- Omelette
+- Half Fry (Sunny Side Up)
+- Egg Roll
+- Egg Fried Rice
+- Egg Masala
+- Egg Keema
+- Paneer Masala
+- Paneer Makhani
+- Paneer Do Pyaza
+- Paneer Kadhai
+- Paneer Korma
+- Tofu Bhurji
+- Tofu Tikka
+- Tofu Masala
+- Tofu Butter Masala
+- Tofu Makhani
+- Tofu Do Pyaza
+- Tofu Kadhai
+- Tofu Korma
+- Tofu Pasanda
+- Plain White Rice (Boiled)
+- Brown Rice (Boiled)
+- Roti / Chapati (Plain)
+- Roti / Chapati (with Ghee)
+- Poha (Flattened Rice)
+- Khichdi (Plain)
+- Oats (Porridge)
+- Muesli with Milk
+- Cornflakes with Milk
+- Roasted Makhana (Fox Nuts)
+- Roasted Chana (Chickpeas)
+- Peanut Butter (1 tbsp)
+- Boiled Sweet Potato
+- Samosa (Medium)
+- Maggi / Instant Noodles
+- Idli (Plain, 2 pieces)
+- Dosa (Plain, No Oil)

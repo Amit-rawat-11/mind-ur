@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart'; // Ensure Google Fonts is available
 import '../theme/colors.dart'; // Ensure MindurColors is available
 
-
 import '../components/chat_screen_widgets/chat_drawer.dart';
 import '../components/chat_screen_widgets/input_bar.dart';
 import '../components/chat_screen_widgets/message_bubble.dart';
@@ -74,7 +73,7 @@ class _ChatScreenState extends State<ChatScreen>
 
     if (!hasSeen) {
       if (!mounted) return;
-      
+
       // Delay slightly to ensure context is ready
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
@@ -85,8 +84,8 @@ class _ChatScreenState extends State<ChatScreen>
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
-          backgroundColor: isDark 
-              ? MindurColors.darkSurfaceContainerHigh 
+          backgroundColor: isDark
+              ? MindurColors.darkSurfaceContainerHigh
               : MindurColors.lightSurfaceContainerHigh,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -96,15 +95,19 @@ class _ChatScreenState extends State<ChatScreen>
             style: GoogleFonts.manrope(
               fontSize: 20,
               fontWeight: FontWeight.w700,
-              color: isDark ? MindurColors.darkTextPrimary : MindurColors.lightTextPrimary,
+              color: isDark
+                  ? MindurColors.darkTextPrimary
+                  : MindurColors.lightTextPrimary,
             ),
           ),
           content: Text(
-            'Mind-ur is still in early development. AI replies might take a bit longer than usual as we optimize our models.\n\nThank you for your patience!',
+            'Mind-ur is still in early development. The first AI reply may take a little longer while the system wakes up and gets ready.\n\nAfter that, responses should be much faster.\n\nThank you for your patience!',
             style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.w400,
-              color: isDark ? MindurColors.darkTextSecondary : MindurColors.lightTextSecondary,
+              color: isDark
+                  ? MindurColors.darkTextSecondary
+                  : MindurColors.lightTextSecondary,
               height: 1.5,
             ),
           ),
@@ -144,10 +147,16 @@ class _ChatScreenState extends State<ChatScreen>
   }
 
   void _sendMessage() {
+    // ❌ Block sending if AI is already processing
+    if (_controller.isSendingNotifier.value) {
+      return;
+    }
+
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
 
     _inputController.clear();
+
     logDebug('[SendMessage] User message length: ${text.length}');
 
     AnalyticsService().logChatMessageSent(messageLength: text.length);
@@ -305,12 +314,15 @@ class _ChatScreenState extends State<ChatScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: ValueListenableBuilder<bool>(
-                    valueListenable: _controller.isTypingNotifier,
-                    builder: (context, isTyping, _) => InputBar(
-                      controller: _inputController,
-                      isTyping: isTyping,
-                      onSend: _sendMessage,
-                    ),
+                    valueListenable: _controller.isSendingNotifier,
+                    builder: (context, isSending, _) {
+                      return InputBar(
+                        controller: _inputController,
+                        isTyping: isSending,
+                        isSending: isSending,
+                        onSend: _sendMessage,
+                      );
+                    },
                   ),
                 ),
               ],

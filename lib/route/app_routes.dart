@@ -25,6 +25,8 @@ void logDebug(String message) {
 }
 
 class AppRoutes {
+  static bool isDeletingAccount = false;
+
   static const String onboarding = '/onboarding';
   static const String login = '/login';
   static const String signup = '/signup';
@@ -52,6 +54,8 @@ class AppRoutes {
     refreshListenable: _AuthStateNotifier(),
 
     redirect: (context, state) async {
+      if (isDeletingAccount) return null;
+
       final isAuthenticated = _isAuthenticated();
       final isOnboardingCompleted = await _isOnboardingCompleted();
 

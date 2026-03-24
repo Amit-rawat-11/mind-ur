@@ -13,6 +13,7 @@ import '../services/notification_service.dart';
 import '../theme/app_background.dart';
 import '../theme/theme_controller.dart' show AppThemeController;
 import '../utils/journal_streak_util.dart';
+import '../route/app_routes.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -634,6 +635,8 @@ class _AccountScreenState extends State<AccountScreen>
                                                 setState(
                                                   () => isDeleting = true,
                                                 );
+                                                
+                                                AppRoutes.isDeletingAccount = true;
 
                                                 try {
                                                   final uid = user.uid;
@@ -672,11 +675,20 @@ class _AccountScreenState extends State<AccountScreen>
                                                     context.pop();
                                                     context.go('/login');
                                                   }
-                                                } catch (_) {
+                                                } catch (e) {
                                                   if (context.mounted) {
                                                     context.pop();
                                                     context.go('/account');
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('Failed to delete account: $e'),
+                                                        backgroundColor: colors.error,
+                                                        duration: const Duration(seconds: 4),
+                                                      ),
+                                                    );
                                                   }
+                                                } finally {
+                                                  AppRoutes.isDeletingAccount = false;
                                                 }
                                               },
                                         child: isDeleting

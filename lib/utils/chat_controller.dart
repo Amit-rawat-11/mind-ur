@@ -271,8 +271,19 @@ Stay consistent as **Dr. Aurora**, Mindur caring AI therapist. ❤️
       _addMessage(aiMsg);
       await _saveMessage(aiMsg);
       _history.add(_toHistory(aiMsg));
-    } catch (_) {
+    } catch (e) {
+      debugPrint("AI ERROR: $e");
+
       _cancelThinking();
+
+      final errorMsg = ChatMessage(
+        sessionId: currentSessionId!,
+        text: "Hmm… something went wrong on my side. Try again in a moment.",
+        isUser: false,
+        timestamp: DateTime.now(),
+      );
+
+      _addMessage(errorMsg);
     } finally {
       if (!_isDisposed) {
         _sendWatchdog?.cancel();
@@ -446,23 +457,23 @@ Stay consistent as **Dr. Aurora**, Mindur caring AI therapist. ❤️
     _thinkingTimer?.cancel();
     _sendWatchdog?.cancel();
   }
+
   void resetAllChatsLocally() {
-  if (_isDisposed) return;
+    if (_isDisposed) return;
 
-  // Clear UI
-  messagesNotifier.value = [];
+    // Clear UI
+    messagesNotifier.value = [];
 
-  // Clear session list UI
-  sessionsNotifier.value = [];
+    // Clear session list UI
+    sessionsNotifier.value = [];
 
-  // Clear current session
-  currentSessionId = null;
+    // Clear current session
+    currentSessionId = null;
 
-  // Clear memory & caches
-  _history.clear();
-  _sessionCache.clear();
+    // Clear memory & caches
+    _history.clear();
+    _sessionCache.clear();
 
-  _hasUserInteracted = false;
-}
-
+    _hasUserInteracted = false;
+  }
 }

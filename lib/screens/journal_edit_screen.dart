@@ -22,6 +22,7 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
 
   String? titleError;
   String? contentError;
+  bool _isSaving = false;
 
   bool get isEditing => widget.documentId != null;
 
@@ -45,6 +46,8 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
   }
 
   void saveEntry() async {
+    if (_isSaving) return;
+
     final title = titleController.text.trim();
     final content = contentController.text.trim();
 
@@ -55,63 +58,77 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
 
     if (titleError != null || contentError != null) return;
 
-    final entry = JournalEntry(
-      title: title,
-      content: content,
-      timestamp: DateTime.now(),
-    );
+    setState(() {
+      _isSaving = true;
+    });
 
-    if (isEditing) {
-      await firestoreService.updateJournalEntry(widget.documentId!, entry);
+    try {
+      final entry = JournalEntry(
+        title: title,
+        content: content,
+        timestamp: DateTime.now(),
+      );
 
-      // ✅ LOG JOURNAL EDIT
-      await AnalyticsService().logJournalEdited(entryId: widget.documentId!);
-    } else {
-      await firestoreService.addJournalEntry(entry);
+      if (isEditing) {
+        await firestoreService.updateJournalEntry(widget.documentId!, entry);
 
-      // ✅ LOG JOURNAL CREATION
-      final wordCount = content
-          .split(' ')
-          .where((word) => word.isNotEmpty)
-          .length;
-      final hour = DateTime.now().hour;
-      String timeOfDay;
-      if (hour < 12) {
-        timeOfDay = 'morning';
-      } else if (hour < 17) {
-        timeOfDay = 'afternoon';
-      } else if (hour < 21) {
-        timeOfDay = 'evening';
+        // ✅ LOG JOURNAL EDIT
+        await AnalyticsService().logJournalEdited(entryId: widget.documentId!);
       } else {
-        timeOfDay = 'night';
+        await firestoreService.addJournalEntry(entry);
+
+        // ✅ LOG JOURNAL CREATION
+        final wordCount = content
+            .split(' ')
+            .where((word) => word.isNotEmpty)
+            .length;
+        final hour = DateTime.now().hour;
+        String timeOfDay;
+        if (hour < 12) {
+          timeOfDay = 'morning';
+        } else if (hour < 17) {
+          timeOfDay = 'afternoon';
+        } else if (hour < 21) {
+          timeOfDay = 'evening';
+        } else {
+          timeOfDay = 'night';
+        }
+
+        await AnalyticsService().logJournalCreated(
+          wordCount: wordCount,
+          timeOfDay: timeOfDay,
+        );
       }
 
-      await AnalyticsService().logJournalCreated(
-        wordCount: wordCount,
-        timeOfDay: timeOfDay,
-      );
-    }
+      if (!mounted) return;
 
-    final colors = Theme.of(context).colorScheme;
+      final colors = Theme.of(context).colorScheme;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.check_circle_outline, color: Colors.white),
-            SizedBox(width: 10),
-            Expanded(child: Text("Saved successfully")),
-          ],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle_outline, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(child: Text("Saved successfully")),
+            ],
+          ),
+          backgroundColor: colors.secondary,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        backgroundColor: colors.secondary,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
+      );
 
-    context.pop();
+      context.pop();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -145,7 +162,16 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
           foregroundColor: colors.onSurface,
           elevation: 0,
           actions: [
-            IconButton(icon: const Icon(Icons.save), onPressed: saveEntry),
+            IconButton(
+              icon: _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save),
+              onPressed: _isSaving ? null : saveEntry,
+            ),
           ],
         ),
         body: SafeArea(
@@ -197,8 +223,14 @@ class _JournalEditScreenState extends State<JournalEditScreen> {
                   width: MediaQuery.of(context).size.width * 0.55,
                   height: MediaQuery.of(context).size.width * 0.12,
                   child: ElevatedButton(
-                    onPressed: saveEntry,
-                    child: const Text('Save'),
+                    onPressed: _isSaving ? null : saveEntry,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Save'),
                   ),
                 ),
               ],

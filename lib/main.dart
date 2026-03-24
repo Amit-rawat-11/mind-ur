@@ -11,7 +11,6 @@ import 'firebase_options.dart';
 import 'route/app_routes.dart';
 
 import 'services/boot_receiver_handler.dart';
-import 'services/api_config_service.dart';
 import 'services/notification_service.dart';
 import 'services/analytics_service.dart';
 import 'services/connectivity_service.dart';
@@ -57,9 +56,6 @@ Future<void> _initializeApp() async {
         await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
       } catch (_) {}
     }
-
-    await ApiConfigService.load();
-    logDebug('✅ API config loaded');
 
     await NotificationService().initialize();
     logDebug('✅ Notification service initialized');
@@ -113,7 +109,7 @@ class MyApp extends StatelessWidget {
         );
       },
     );
-  }
+  } 
 }
 
 /// ✅ Global connectivity monitor

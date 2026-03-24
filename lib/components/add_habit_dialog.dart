@@ -14,6 +14,7 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
   final TextEditingController _habitNameController = TextEditingController();
   final TextEditingController _habitdescController = TextEditingController();
   String priority = 'Medium';
+  bool _isSubmitted = false;
 
   @override
   void dispose() {
@@ -127,30 +128,43 @@ class _AddHabitDialogState extends State<AddHabitDialog> {
           ),
         ),
         ElevatedButton(
-          onPressed: () {
-            final habitName = _habitNameController.text.trim();
-            final habitdesc = _habitdescController.text.trim();
+          onPressed: _isSubmitted
+              ? null
+              : () {
+                  final habitName = _habitNameController.text.trim();
+                  final habitdesc = _habitdescController.text.trim();
 
-            if (habitName.isEmpty) return;
+                  if (habitName.isEmpty) return;
+                  
+                  setState(() {
+                    _isSubmitted = true;
+                  });
 
-            final newHabit = Habit(
-              title: habitName,
-              description:
-                  habitdesc.isEmpty ? "No description yet" : habitdesc,
-              progress: 0.0,
-              priority: priority,
-              isCompleted: false,
-              startDate: DateTime.now(),
-              endDate: DateTime.now().add(const Duration(days: 30)),
-              lastUpdated: DateTime.now(),
-              completedDates: const [],
-            );
+                  final newHabit = Habit(
+                    title: habitName,
+                    description: habitdesc.isEmpty
+                        ? "No description yet"
+                        : habitdesc,
+                    progress: 0.0,
+                    priority: priority,
+                    isCompleted: false,
+                    startDate: DateTime.now(),
+                    endDate: DateTime.now().add(const Duration(days: 30)),
+                    lastUpdated: DateTime.now(),
+                    completedDates: const [],
+                  );
 
-            _habitNameController.clear();
-            _habitdescController.clear();
-            Navigator.pop(context, newHabit);
-          },
-          child: const Text("Add"),
+                  _habitNameController.clear();
+                  _habitdescController.clear();
+                  Navigator.pop(context, newHabit);
+                },
+          child: _isSubmitted
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text("Add"),
         ),
       ],
     );

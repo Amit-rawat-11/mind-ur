@@ -184,17 +184,7 @@ class NotificationService {
         return false;
       }
 
-      // 2. Request exact alarm permission (Android 12+)
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final alarmStatus = await Permission.scheduleExactAlarm.request();
-        if (!alarmStatus.isGranted) {
-          if (kDebugMode) {
-            debugPrint('⚠️ Exact alarm permission denied - notifications may be delayed');
-          }
-        }
-      }
-
-      // 3. Request battery optimization exemption
+      // 2. Request battery optimization exemption
       await _requestBatteryOptimizationExemption();
 
       // 4. iOS permissions
@@ -459,7 +449,7 @@ class NotificationService {
       body,
       scheduledDate,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
@@ -1005,7 +995,7 @@ class NotificationService {
       'Take a moment to reflect on this week. What went well? What can improve?',
       scheduledDate,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
@@ -1085,7 +1075,7 @@ class NotificationService {
       'You\'re halfway through the week! How are you feeling? Take a moment to journal.',
       scheduledDate,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
@@ -1130,7 +1120,7 @@ class NotificationService {
       'It\'s the weekend! Take time to relax and reflect on your journey.',
       scheduledDate,
       details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,

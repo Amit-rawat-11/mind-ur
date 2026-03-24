@@ -1,97 +1,63 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-import 'api_config_service.dart';
-
 class MindurAiService {
-  static const String _endpoint =
-      'https://openrouter.ai/api/v1/chat/completions';
+  /// Backend URL depending on device
+  /// Android Emulator -> 10.0.2.2
+  /// iOS Simulator -> localhost
+  /// Real Device -> replace with your PC IP
+  static const String _baseUrl = "https://mindur-backend.onrender.com";
+  static String get _endpoint => "$_baseUrl/ai/chat";
 
-  static final _apiKey = ApiConfigService.openRouterKey!;
-  static const String _primaryModel ='google/gemini-2.0-flash-exp:free';
-
-  static const String _fallbackModel = 'mistralai/mistral-7b-instruct';  
-
-  static const String _plainTextSystemPrompt = '''
-You are an AI assistant inside the Mindur app.
-You are not a real person.
-
-Do not invent names.
-Do not address the user by any name unless the user explicitly provides one.
-Do not roleplay identity beyond being an AI assistant.
-Do not repeat sentences or paragraphs.
-
-Emojis are allowed but must be used sparingly.
-Use at most one emoji per response.
-Only use an emoji if it genuinely adds warmth.
-Never repeat emojis or use emoji chains.
-
-Reply in plain, natural text only.
-Do not use markdown or special formatting.
-Be supportive, concise, and calm.
-''';
-
+  /// Send message to Mindur backend AI
   Future<String> sendMessage(
     List<Map<String, dynamic>> history,
     String userMessage,
   ) async {
-    if (_apiKey.isEmpty) {
-      throw Exception('OPENROUTER_API_KEY missing');
-    }
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "message": userMessage,
+              "history": history
+                  .map(
+                    (m) => {"role": m["role"], "content": m["content"] ?? ""},
+                  )
+                  .toList(),
+            }),
+          )
+          .timeout(const Duration(seconds: 25));
 
-    // ✅ DO NOT redefine persona here
-    // Persona comes ONLY from ChatController history
-
-    final messages = [
-      {'role': 'system', 'content': _plainTextSystemPrompt},
-      ...history.map((m) => {'role': m['role'], 'content': m['content'] ?? ''}),
-    ];
-
-    return await _callModel(_primaryModel, messages).catchError((_) async {
       if (kDebugMode) {
-        debugPrint('⚠️ Primary model failed, switching to fallback model');
+        debugPrint("🧠 Mindur backend status: ${response.statusCode}");
+        debugPrint("🧠 Mindur backend response: ${response.body}");
       }
-      return await _callModel(_fallbackModel, messages);
-    });
-  }
 
-  Future<String> _callModel(
-    String model,
-    List<Map<String, dynamic>> messages,
-  ) async {
-    final res = await http.post(
-      Uri.parse(_endpoint),
-      headers: {
-        'Authorization': 'Bearer $_apiKey',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://mindur.app',
-        'X-Title': 'Mindur',
-      },
-      body: jsonEncode({
-        'model': model,
-        'messages': messages,
-        'temperature': 0.65,
-        'max_tokens': 500,
-      }),
-    );
+      if (response.statusCode != 200) {
+        throw Exception("Backend error ${response.statusCode}");
+      }
 
-    if (kDebugMode) {
-      debugPrint(
-          '🧠 OpenRouter API called with model: $model, status: ${res.statusCode}');
+      final data = jsonDecode(response.body);
+
+      final reply = data["reply"]?.toString().trim();
+
+      if (reply == null || reply.isEmpty) {
+        return "I'm here with you. Want to say a little more?";
+      }
+
+      return reply;
+    } on SocketException {
+      throw Exception("Cannot connect to Mindur AI server");
+    } on HttpException {
+      throw Exception("Server error while contacting AI");
+    } on FormatException {
+      throw Exception("Invalid response from AI server");
+    } catch (e) {
+      throw Exception("AI request failed: $e");
     }
-
-    if (res.statusCode != 200) {
-      throw Exception('OpenRouter error ${res.statusCode}');
-    }
-
-    final data = jsonDecode(res.body);
-    final reply = data['choices']?[0]?['message']?['content']
-        ?.toString()
-        .trim();
-
-    return (reply == null || reply.isEmpty)
-        ? "I’m here with you. Want to say a little more?"
-        : reply;
   }
 }

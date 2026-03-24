@@ -10,6 +10,7 @@ import 'package:mindur/components/circular_elevated_button.dart';
 import 'package:mindur/components/recent_entry_card.dart';
 import 'package:mindur/data/sample_habit.dart';
 import 'package:mindur/data/sample_journal.dart';
+import 'package:mindur/data/sample_food_extended.dart';
 import 'package:mindur/utils/pet_selection.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
@@ -351,8 +352,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               lineWidth: 22,
                               percent: habitProgress,
                               progressColor: colors.secondary,
-                              backgroundColor: colors.outlineVariant
-                                  .withOpacity(0.4),
+                              backgroundColor: colors.outlineVariant.withValues(
+                                alpha: 0.4,
+                              ),
                               animation: true,
                               animationDuration: 3000,
                               circularStrokeCap: CircularStrokeCap.round,
@@ -372,8 +374,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                     " of ${habits.length} Habits",
                                     style: theme.textTheme.labelMedium
                                         ?.copyWith(
-                                          color: colors.onSurface.withOpacity(
-                                            0.6,
+                                          color: colors.onSurface.withValues(
+                                            alpha: 0.6,
                                           ),
                                         ),
                                   ),
@@ -398,7 +400,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                       vertical: 10,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: colors.onSurface.withOpacity(0.04),
+                                      color: colors.onSurface.withValues(
+                                        alpha: 0.04,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Row(
@@ -422,8 +426,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: colors.onSurface.withOpacity(
-                                              0.06,
+                                            color: colors.onSurface.withValues(
+                                              alpha: 0.06,
                                             ),
                                             borderRadius: BorderRadius.circular(
                                               8,
@@ -434,7 +438,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             style: theme.textTheme.labelSmall
                                                 ?.copyWith(
                                                   color: colors.onSurface
-                                                      .withOpacity(0.7),
+                                                      .withValues(alpha: 0.7),
                                                 ),
                                           ),
                                         ),
@@ -447,6 +451,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
+                     kDebugMode ? ElevatedButton(
+                        onPressed: () async {
+                          debugPrint("UPLOAD BUTTON PRESSED");
+                          await removeDuplicateFoods();
+                        },
+                        child: const Icon(Icons.fastfood),
+                      )
+                      : const SizedBox.shrink(),
                     ],
                   ),
                 ),

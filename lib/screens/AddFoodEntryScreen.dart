@@ -22,7 +22,11 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
   final proteinController = TextEditingController();
   final foodquantityController = TextEditingController();
 
+  bool _isSaving = false;
+
   void saveEntry() async {
+    if (_isSaving) return;
+
     final foodName = foodNameController.text.trim();
     final calories = int.tryParse(caloriesController.text.trim()) ?? 0;
     final protein = int.tryParse(proteinController.text.trim()) ?? 0;
@@ -43,37 +47,50 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
       return;
     }
 
-    final foodItem = FoodItem(
-      name: foodName,
-      calories: calories * quantity,
-      protein: protein * quantity,
-      quantity: quantity,
-    );
+    setState(() {
+      _isSaving = true;
+    });
 
-    await firestoreService.logFood(foodItem);
+    try {
+      final foodItem = FoodItem(
+        name: foodName,
+        calories: calories * quantity,
+        protein: protein * quantity,
+        quantity: quantity,
+      );
 
-    // ✅ LOG FOOD LOGGED
-    await AnalyticsService().logFoodLogged(
-      foodName: foodItem.name,
-      calories: foodItem.calories,
-      protein: foodItem.protein,
-    );
+      await firestoreService.logFood(foodItem);
 
-    foodNameController.clear();
-    caloriesController.clear();
-    proteinController.clear();
-    foodquantityController.clear();
+      // ✅ LOG FOOD LOGGED
+      await AnalyticsService().logFoodLogged(
+        foodName: foodItem.name,
+        calories: foodItem.calories,
+        protein: foodItem.protein,
+      );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text("Food entry saved successfully!"),
-        duration: Duration(seconds: 2),
-      ),
-    );
+      if (!mounted) return;
 
-    setState(() {});
-    context.pop();
+      foodNameController.clear();
+      caloriesController.clear();
+      proteinController.clear();
+      foodquantityController.clear();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text("Food entry saved successfully!"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      context.pop();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -127,8 +144,14 @@ class _FoodLoggingScreenState extends State<FoodLoggingScreen> {
                     width: MediaQuery.of(context).size.width * 0.55,
                     height: MediaQuery.of(context).size.width * 0.12,
                     child: ElevatedButton(
-                      onPressed: saveEntry,
-                      child: const Text('Save'),
+                      onPressed: _isSaving ? null : saveEntry,
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Save'),
                     ),
                   ),
                   const SizedBox(height: 24),
