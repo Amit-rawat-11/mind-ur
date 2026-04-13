@@ -154,7 +154,7 @@ class _JournalScreenState extends State<JournalScreen> {
                       borderRadius: BorderRadius.circular(16),
                       onTap: () async {
                         await context.pushNamed(
-                          'journal-edit',
+                          'journal-view',
                           pathParameters: {'id': entry.id},
                         );
                         setState(() {});

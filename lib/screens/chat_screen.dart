@@ -101,7 +101,7 @@ class _ChatScreenState extends State<ChatScreen>
             ),
           ),
           content: Text(
-            'Mind-ur is still in early development. The first AI reply may take a little longer while the system wakes up and gets ready.\n\nAfter that, responses should be much faster.\n\nThank you for your patience!',
+            'Mindur is still in early development. The first AI reply may take a little longer while the system wakes up and gets ready.\n\nAfter that, responses should be much faster.\n\nThank you for your patience!',
             style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.w400,

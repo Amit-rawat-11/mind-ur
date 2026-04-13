@@ -34,7 +34,6 @@ class MindurAiService {
 
       if (kDebugMode) {
         debugPrint("🧠 Mindur backend status: ${response.statusCode}");
-        debugPrint("🧠 Mindur backend response: ${response.body}");
       }
 
       if (response.statusCode != 200) {

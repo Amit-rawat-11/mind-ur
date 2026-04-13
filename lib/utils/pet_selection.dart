@@ -1,5 +1,5 @@
 class PetSelection {
-  String petPath= "homescreen_cat.svg";
+  String petPath = "homescreen_cat.svg";
   String pet;
 
   PetSelection({required this.pet}) {
@@ -8,7 +8,7 @@ class PetSelection {
     } else if (pet == "Cat") {
       petPath = "homescreen_cat.svg";
     } else {
-      petPath = "homescreen_cat.svg"; // fallback (optional)
+      petPath = "homescreen_dog.svg"; // fallback (optional)
     }
   }
 }

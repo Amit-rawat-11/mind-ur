@@ -28,10 +28,7 @@ class HomescreenCards extends StatelessWidget {
         ),
         height: height,
         width: width,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: child,
-        ),
+        child: Padding(padding: const EdgeInsets.all(14.0), child: child),
       ),
     );
   }
@@ -61,10 +58,7 @@ class TransparentCard extends StatelessWidget {
         ),
         height: height,
         width: width,
-        child: Padding(
-          padding: const EdgeInsets.all(0.0),
-          child: child,
-        ),
+        child: Padding(padding: const EdgeInsets.all(0.0), child: child),
       ),
     );
   }

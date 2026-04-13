@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../screens/journal_view_screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/login_screen.dart';
@@ -54,7 +55,15 @@ class AppRoutes {
     refreshListenable: _AuthStateNotifier(),
 
     redirect: (context, state) async {
-      if (isDeletingAccount) return null;
+      if (isDeletingAccount) {
+        // Allow navigation to proceed freely during deletion.
+        // Once the user lands on /login (signed out), the deletion is
+        // complete — reset the flag so the router works normally again.
+        if (!_isAuthenticated() && state.matchedLocation == login) {
+          isDeletingAccount = false;
+        }
+        return null;
+      }
 
       final isAuthenticated = _isAuthenticated();
       final isOnboardingCompleted = await _isOnboardingCompleted();
@@ -103,6 +112,13 @@ class AppRoutes {
 
             if (personalizedCompleted) {
               if (isOnAuthPage || isOnPersonalization) {
+                // 🆕 First-time user → open journal editor directly
+                final firstJournalDone =
+                    userDoc.data()?['firstJournalDone'] ?? false;
+                if (!firstJournalDone) {
+                  logDebug('🔄 First login after personalization → journal/new');
+                  return journalNew;
+                }
                 logDebug('🔄 Already personalized → home');
                 return home;
               }
@@ -212,6 +228,12 @@ class AppRoutes {
             child: JournalEditScreen(documentId: documentId),
           );
         },
+      ),
+      GoRoute(
+        path: '/journal/:id/view',
+        name: 'journal-view',
+        builder: (ctx, state) =>
+            JournalViewScreen(documentId: state.pathParameters['id']!),
       ),
 
       // 🍔 FOOD ROUTES

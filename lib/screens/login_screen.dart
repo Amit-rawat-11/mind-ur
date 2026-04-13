@@ -57,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await AnalyticsService().setUserId(user.uid);
       }
 
+      if (!mounted) return;
       context.go('/');
     } else {
       _showSnack(result, isError: true);
@@ -74,6 +75,125 @@ class _LoginScreenState extends State<LoginScreen> {
             ? Theme.of(context).colorScheme.error
             : Theme.of(context).colorScheme.primary,
       ),
+    );
+  }
+
+  /// Shows a dialog asking for an email and sends a Firebase password-reset link.
+  void _showForgotPasswordDialog() {
+    // Pre-fill with whatever the user already typed in the email field
+    final resetEmailController = TextEditingController(
+      text: emailController.text.trim(),
+    );
+    final scaffoldCtx = context;
+
+    showDialog<void>(
+      context: scaffoldCtx,
+      builder: (dialogCtx) {
+        bool isSending = false;
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (_, setDialogState) => AlertDialog(
+            title: const Text('Reset password'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Enter your account email and we\'ll send you a link to reset your password.',
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: resetEmailController,
+                  enabled: !isSending,
+                  autofocus: true,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: 'Email address',
+                    prefixIcon: const Icon(Icons.mail_outline),
+                    errorText: errorText,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    isSending ? null : () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: isSending
+                    ? null
+                    : () async {
+                        final email = resetEmailController.text.trim();
+
+                        if (email.isEmpty || !email.contains('@')) {
+                          setDialogState(
+                            () => errorText = 'Please enter a valid email',
+                          );
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isSending = true;
+                          errorText = null;
+                        });
+
+                        try {
+                          await FirebaseAuth.instance
+                              .sendPasswordResetEmail(email: email);
+
+                          if (dialogCtx.mounted) {
+                            Navigator.of(dialogCtx).pop();
+                          }
+                          if (scaffoldCtx.mounted) {
+                            ScaffoldMessenger.of(scaffoldCtx).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '✅ Reset link sent to $email — check your inbox.',
+                                ),
+                                duration: const Duration(seconds: 5),
+                                backgroundColor:
+                                    Theme.of(scaffoldCtx).colorScheme.primary,
+                              ),
+                            );
+                          }
+                        } on FirebaseAuthException catch (e) {
+                          String msg;
+                          switch (e.code) {
+                            case 'user-not-found':
+                              msg = 'No account found with this email.';
+                            case 'invalid-email':
+                              msg = 'The email address is not valid.';
+                            case 'too-many-requests':
+                              msg = 'Too many attempts. Please wait a moment.';
+                            default:
+                              msg = e.message ?? 'Something went wrong.';
+                          }
+                          setDialogState(() {
+                            isSending = false;
+                            errorText = msg;
+                          });
+                        } catch (_) {
+                          setDialogState(() {
+                            isSending = false;
+                            errorText = 'Failed to send reset email.';
+                          });
+                        }
+                      },
+                child: isSending
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send link'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -129,7 +249,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   isPassword: true,
                 ),
 
-                const SizedBox(height: 32),
+                // ── Forgot password link ────────────────────────────────
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _showForgotPasswordDialog,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 0,
+                        vertical: 4,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(
+                      'Forgot password?',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 SizedBox(
                   width: double.infinity,

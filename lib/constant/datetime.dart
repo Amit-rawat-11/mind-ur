@@ -11,6 +11,11 @@ class TimeUtils {
     final now = DateTime.now();
     return DateFormat('h:mm a').format(now); // e.g., 5:20 PM
   }
+
+    static String get dayName {
+    final now = DateTime.now();
+    return DateFormat('EEEE').format(now); // e.g., Friday
+  }
 }
 
 

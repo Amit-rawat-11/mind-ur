@@ -97,7 +97,7 @@ class MyApp extends StatelessWidget {
       valueListenable: AppThemeController.themeMode,
       builder: (context, mode, _) {
         return MaterialApp.router(
-          title: 'Mind-ur',
+          title: 'Mindur',
           debugShowCheckedModeBanner: false,
           theme: MindurTheme.lightTheme(),
           darkTheme: MindurTheme.darkTheme(),
@@ -130,6 +130,7 @@ class _ConnectivityMonitorState extends State<ConnectivityMonitor> {
     super.initState();
 
     _hasInternet = ConnectivityService().isConnected;
+    
 
     ConnectivityService().connectionStatus.listen((isConnected) {
       if (mounted && _hasInternet != isConnected) {

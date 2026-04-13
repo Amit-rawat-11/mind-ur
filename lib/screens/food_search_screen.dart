@@ -163,7 +163,7 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: colors.surfaceContainerHighest
-                                  .withOpacity(0.6),
+                                  .withValues(alpha: 0.6),
                               hintText: 'Search for food',
                               prefixIcon: const Icon(Icons.search),
                               border: OutlineInputBorder(
@@ -219,6 +219,9 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
                                 description:
                                     "${food['protein']}g Protein | ${food['calories']} Cal | ${food['servingSize']}",
                                 onPressed: () async {
+                                  // Capture messenger before any async gap
+                                  final messenger = ScaffoldMessenger.of(context);
+
                                   final result = await showDialog<int>(
                                     context: context,
                                     builder: (context) {
@@ -277,14 +280,23 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
                                   );
 
                                   if (result != null) {
+                                    // ✅ FIX BUG #4: Cast Firestore num (may be double) to int
+                                    // safely with .round() to avoid silent runtime type errors
+                                    // that caused specific food items to always fail logging.
+                                    final calories = (food['calories'] as num).round();
+                                    final protein = (food['protein'] as num).round();
+
                                     final foodItem = FoodItem(
                                       name: food['name'],
                                       quantity: result,
-                                      calories: food['calories'] * result,
-                                      protein: food['protein'] * result,
+                                      calories: calories * result,
+                                      protein: protein * result,
                                     );
 
-                                    firestoreService.logFood(foodItem);
+                                    // ✅ FIX BUG #3: Added `await` — without this the
+                                    // Firestore write was fire-and-forget and dropped silently
+                                    // when the user navigated away quickly.
+                                    await firestoreService.logFood(foodItem);
 
                                     // ✅ LOG FOOD LOGGED
                                     await AnalyticsService().logFoodLogged(
@@ -293,13 +305,15 @@ class _FoodSearchSceenState extends State<FoodSearchSceen>
                                       protein: foodItem.protein,
                                     );
 
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          '${foodItem.name} x$result logged!',
+                                    if (mounted) {
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            '${foodItem.name} x$result logged!',
+                                          ),
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    }
                                   }
                                 },
                               ),

@@ -104,7 +104,7 @@ class _AccountScreenState extends State<AccountScreen>
 
     return Container(
       decoration: BoxDecoration(
-        color: colors.onSurface.withOpacity(0.035),
+        color: colors.onSurface.withValues(alpha: 0.035),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(children: children),
@@ -565,154 +565,7 @@ class _AccountScreenState extends State<AccountScreen>
                           icon: LucideIcons.trash2,
                           title: 'Delete account',
                           color: colors.error,
-                          onTap: () {
-                            final controller = TextEditingController();
-                            bool isDeleting = false;
-
-                            showDialog(
-                              context: context,
-                              barrierDismissible: !isDeleting,
-                              builder: (dialogContext) {
-                                return StatefulBuilder(
-                                  builder: (context, setState) => AlertDialog(
-                                    title: const Text('Delete Account?'),
-                                    content: SingleChildScrollView(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text(
-                                            'This will permanently delete all your data. This action cannot be undone.',
-                                          ),
-                                          const SizedBox(height: 12),
-                                          TextField(
-                                            controller: controller,
-                                            enabled: !isDeleting,
-                                            decoration: const InputDecoration(
-                                              hintText: 'Type name or "delete"',
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: isDeleting
-                                            ? null
-                                            : () => context.pop(),
-                                        child: const Text('Cancel'),
-                                      ),
-                                      TextButton(
-                                        onPressed: isDeleting
-                                            ? null
-                                            : () async {
-                                                final user = FirebaseAuth
-                                                    .instance
-                                                    .currentUser;
-                                                if (user == null) {
-                                                  context.pop();
-                                                  context.go('/account');
-                                                  return;
-                                                }
-
-                                                final input = controller.text
-                                                    .trim()
-                                                    .toLowerCase();
-                                                final displayName = user
-                                                    .displayName
-                                                    ?.trim()
-                                                    .toLowerCase();
-
-                                                if (input.isEmpty ||
-                                                    (input != 'delete' &&
-                                                        input != displayName)) {
-                                                  context.pop();
-                                                  context.go('/account');
-                                                  return;
-                                                }
-
-                                                setState(
-                                                  () => isDeleting = true,
-                                                );
-                                                
-                                                AppRoutes.isDeletingAccount = true;
-
-                                                try {
-                                                  final uid = user.uid;
-                                                  final db = FirebaseFirestore
-                                                      .instance;
-                                                  final userRef = db
-                                                      .collection('users')
-                                                      .doc(uid);
-
-                                                  final subCollections = [
-                                                    'journals',
-                                                    'habits',
-                                                    'food',
-                                                    'workouts',
-                                                    'badges',
-                                                    'notification_analytics',
-                                                    'ai_sessions',
-                                                  ];
-
-                                                  for (final col
-                                                      in subCollections) {
-                                                    final snap = await userRef
-                                                        .collection(col)
-                                                        .get();
-                                                    for (final doc
-                                                        in snap.docs) {
-                                                      await doc.reference
-                                                          .delete();
-                                                    }
-                                                  }
-
-                                                  await userRef.delete();
-                                                  await user.delete();
-
-                                                  if (context.mounted) {
-                                                    context.pop();
-                                                    context.go('/login');
-                                                  }
-                                                } catch (e) {
-                                                  if (context.mounted) {
-                                                    context.pop();
-                                                    context.go('/account');
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text('Failed to delete account: $e'),
-                                                        backgroundColor: colors.error,
-                                                        duration: const Duration(seconds: 4),
-                                                      ),
-                                                    );
-                                                  }
-                                                } finally {
-                                                  AppRoutes.isDeletingAccount = false;
-                                                }
-                                              },
-                                        child: isDeleting
-                                            ? const SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                    ),
-                                              )
-                                            : Text(
-                                                'Delete',
-                                                style: TextStyle(
-                                                  color: colors.error,
-                                                ),
-                                              ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          },
+                          onTap: () => _showDeleteAccountDialog(),
                         ),
                       ]),
                     ),
@@ -722,6 +575,301 @@ class _AccountScreenState extends State<AccountScreen>
       ),
     );
   }
+
+  // ─── DELETE ACCOUNT ────────────────────────────────────────────────────────
+
+  /// Step 1 – Confirm with name or "delete" typed
+  void _showDeleteAccountDialog() {
+    final confirmController = TextEditingController();
+    final scaffoldCtx = context; // capture scaffold context before dialog opens
+
+    showDialog<void>(
+      context: scaffoldCtx,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        bool isProcessing = false;
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (_, setDialogState) => AlertDialog(
+            title: const Text('Delete Account?'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This will permanently delete your account and ALL your data. '
+                    'This action cannot be undone.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: confirmController,
+                    enabled: !isProcessing,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Type your name or "delete"',
+                      errorText: errorText,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    isProcessing ? null : () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: isProcessing
+                    ? null
+                    : () async {
+                        final input =
+                            confirmController.text.trim().toLowerCase();
+                        final nameMatch = user?.displayName
+                            ?.trim()
+                            .toLowerCase();
+
+                        if (input.isEmpty ||
+                            (input != 'delete' && input != nameMatch)) {
+                          setDialogState(
+                            () => errorText =
+                                'Type your name or "delete" to confirm',
+                          );
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isProcessing = true;
+                          errorText = null;
+                        });
+
+                        // Close step-1 dialog and move to re-auth step
+                        Navigator.of(dialogCtx).pop();
+
+                        if (scaffoldCtx.mounted) {
+                          _showReauthAndDeleteDialog(scaffoldCtx);
+                        }
+                      },
+                child: Text(
+                  'Continue',
+                  style: TextStyle(
+                    color: Theme.of(scaffoldCtx).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Step 2 – Re-authenticate then delete everything
+  void _showReauthAndDeleteDialog(BuildContext scaffoldCtx) {
+    final passwordController = TextEditingController();
+
+    showDialog<void>(
+      context: scaffoldCtx,
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        bool isDeleting = false;
+        String? errorText;
+
+        return StatefulBuilder(
+          builder: (_, setDialogState) => AlertDialog(
+            title: const Text('Confirm your password'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'For security, please enter your password to permanently delete your account.',
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    enabled: !isDeleting,
+                    autofocus: true,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: 'Password',
+                      errorText: errorText,
+                    ),
+                  ),
+                  if (isDeleting) ...[
+                    const SizedBox(height: 16),
+                    const Row(
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Deleting account…'),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed:
+                    isDeleting ? null : () => Navigator.of(dialogCtx).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        final password = passwordController.text;
+                        if (password.isEmpty) {
+                          setDialogState(
+                            () => errorText = 'Please enter your password',
+                          );
+                          return;
+                        }
+
+                        setDialogState(() {
+                          isDeleting = true;
+                          errorText = null;
+                        });
+
+                        // Set flag BEFORE any async work so the router
+                        // redirect is suppressed for the entire operation.
+                        AppRoutes.isDeletingAccount = true;
+
+                        try {
+                          final currentUser =
+                              FirebaseAuth.instance.currentUser;
+                          if (currentUser == null) {
+                            throw Exception('No authenticated user found.');
+                          }
+
+                          // ── 1. Re-authenticate ──────────────────────────
+                          final credential = EmailAuthProvider.credential(
+                            email: currentUser.email!,
+                            password: password,
+                          );
+                          await currentUser
+                              .reauthenticateWithCredential(credential);
+
+                          // ── 2. Delete Firestore data ────────────────────
+                          final uid = currentUser.uid;
+                          final db = FirebaseFirestore.instance;
+                          final userRef =
+                              db.collection('users').doc(uid);
+
+                          // Top-level subcollections
+                          const simpleCollections = [
+                            'journals',
+                            'habits',
+                            'foodlogging',
+                            'workouts',
+                            'badges',
+                            'notification_analytics',
+                            'ai_profile',
+                          ];
+
+                          for (final col in simpleCollections) {
+                            final snap =
+                                await userRef.collection(col).get();
+                            for (final doc in snap.docs) {
+                              await doc.reference.delete();
+                            }
+                          }
+
+                          // ai_sessions has a nested messages sub-collection
+                          final sessions =
+                              await userRef.collection('ai_sessions').get();
+                          for (final session in sessions.docs) {
+                            final messages = await session.reference
+                                .collection('messages')
+                                .get();
+                            for (final msg in messages.docs) {
+                              await msg.reference.delete();
+                            }
+                            await session.reference.delete();
+                          }
+
+                          // Delete the root user document
+                          await userRef.delete();
+
+                          // ── 3. Delete Firebase Auth user ────────────────
+                          await currentUser.delete();
+
+                          // ── 4. Clear analytics & sign out ──────────────
+                          await AnalyticsService().setUserId(null);
+
+                          // ── 5. Navigate to login ────────────────────────
+                          if (dialogCtx.mounted) {
+                            Navigator.of(dialogCtx).pop();
+                          }
+                          if (scaffoldCtx.mounted) {
+                            scaffoldCtx.go('/login');
+                          }
+                        } on FirebaseAuthException catch (e) {
+                          AppRoutes.isDeletingAccount = false;
+
+                          String msg;
+                          if (e.code == 'wrong-password' ||
+                              e.code == 'invalid-credential') {
+                            msg = 'Incorrect password. Please try again.';
+                          } else if (e.code == 'too-many-requests') {
+                            msg =
+                                'Too many attempts. Please wait and try again.';
+                          } else {
+                            msg = e.message ?? 'Authentication failed.';
+                          }
+
+                          setDialogState(() {
+                            isDeleting = false;
+                            errorText = msg;
+                          });
+                        } catch (e) {
+                          AppRoutes.isDeletingAccount = false;
+
+                          if (dialogCtx.mounted) {
+                            Navigator.of(dialogCtx).pop();
+                          }
+                          if (scaffoldCtx.mounted) {
+                            ScaffoldMessenger.of(scaffoldCtx).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('Failed to delete account: $e'),
+                                backgroundColor:
+                                    Theme.of(scaffoldCtx).colorScheme.error,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
+                          }
+                        }
+                        // NOTE: isDeletingAccount is intentionally NOT reset
+                        // in a finally block here — it stays true until after
+                        // navigation to /login completes, preventing the router
+                        // redirect from firing mid-deletion. The flag is reset
+                        // on error paths above, and is naturally irrelevant
+                        // after the app navigates away (new session).
+                      },
+                child: Text(
+                  'Delete My Account',
+                  style: TextStyle(
+                    color: Theme.of(scaffoldCtx).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
 
   @override
   void dispose() {

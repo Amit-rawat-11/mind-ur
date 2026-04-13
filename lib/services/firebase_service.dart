@@ -23,7 +23,9 @@ class FirestoreService {
 
       return UserProfile.fromMap(_uid!, doc.data()!);
     } catch (e) {
-      print("Error fetching user profile: $e");
+      if (kDebugMode) {
+        debugPrint("Error fetching user profile: $e");
+      }
       return null;
     }
   }
@@ -379,8 +381,21 @@ class FirestoreService {
     final uid = _uid;
     if (uid == null) return;
 
+    // ✅ FIX BUG #2: Also write base user fields as fallback.
+    // If the signUp() Firestore doc write failed (e.g. network blip right after
+    // Auth user creation), the doc may only have the subcollection-created
+    // shell. Writing uid/email/name here with merge:true ensures the document
+    // is always complete after personalization, even if signup partially failed.
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     try {
       await _db.collection('users').doc(uid).set({
+        // ✅ Base fields (recovered from Auth if the initial write was lost)
+        'uid': uid,
+        'email': currentUser?.email ?? '',
+        'name': currentUser?.displayName ?? '',
+
+        // Personalization fields
         'petSelection': petSelection,
         'fitnessGoal': fitnessGoal,
         'appGoal': appGoal,
@@ -390,11 +405,12 @@ class FirestoreService {
         'goalWeight': goalWeight,
         'personalizedCompleted': true,
         'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)); // do NOT overwrite signup data
+      }, SetOptions(merge: true)); // merge: true — never overwrites existing fields like createdAt, isPremium
     } catch (e) {
       if (kDebugMode) {
         debugPrint("Error saving personalization: $e");
       }
+      rethrow; // ✅ Rethrow so the caller (_completePersonalization) can show a user-facing error
     }
   }
 

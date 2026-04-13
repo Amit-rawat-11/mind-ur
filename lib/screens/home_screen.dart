@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import 'package:mindur/models/user_profile.dart';
 import 'package:mindur/theme/app_background.dart';
 import 'package:mindur/utils/journal_streak_util.dart';
@@ -34,7 +35,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int journalCurrentStreak = 0;
   int longestStreak = 0;
 
-  final User? user = FirebaseAuth.instance.currentUser;
+  // ✅ FIX BUG #5: Do NOT capture currentUser at class-level construction time.
+  // Auth token may not have flushed displayName yet on first login. Instead,
+  // derive display name reactively from the Firestore profile (see _displayName getter below).
   double habitProgress = 0.0;
 
   List<Map<String, dynamic>> journalEntries = [];
@@ -42,6 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = true;
 
   UserProfile? userProfile;
+
+  /// ✅ FIX BUG #5: Always reads the freshest name available.
+  /// Prefers Firestore profile name (fetched async), then falls back to Auth displayName
+  /// read at render time (not cached at construction time).
+  String get _displayName =>
+      userProfile?.name ??
+      FirebaseAuth.instance.currentUser?.displayName ??
+      'there';
 
   @override
   void initState() {
@@ -207,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 iconData: LucideIcons.user,
               ),
               Text(
-                "MINDUR",
+                "Mindur",
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: colors.onSurface,
                 ),
@@ -236,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "${GreetingUtil.getGreeting()} ${user?.displayName ?? "Anonymous"}",
+                        "${GreetingUtil.getGreeting()} $_displayName",
                         style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: colors.onSurface,
@@ -247,15 +258,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           HomescreenCards(
-                            height: MediaQuery.of(context).size.height * 0.13,
+                            height: MediaQuery.of(context).size.height * 0.19,
                             width: MediaQuery.of(context).size.width * 0.4,
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                const Text("Streak"),
+                                const Text(
+                                  "Journal Streak",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                Lottie.asset(
+                                  "assets/json/fire.json",
+                                  height: 69,
+                                  width: 69,
+                                ),
                                 Text(
-                                  "🔥 $journalCurrentStreak Days",
+                                  "$journalCurrentStreak ${journalCurrentStreak == 1 ? 'Day' : 'Days'}",
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: colors.onSurface,
@@ -451,14 +470,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                     kDebugMode ? ElevatedButton(
-                        onPressed: () async {
-                          debugPrint("UPLOAD BUTTON PRESSED");
-                          await removeDuplicateFoods();
-                        },
-                        child: const Icon(Icons.fastfood),
-                      )
-                      : const SizedBox.shrink(),
+                      kDebugMode
+                          ? ElevatedButton(
+                              onPressed: () async {
+                                debugPrint("UPLOAD BUTTON PRESSED");
+                                await removeDuplicateFoods();
+                              },
+                              child: const Icon(Icons.fastfood),
+                            )
+                          : const SizedBox.shrink(),
                     ],
                   ),
                 ),
